@@ -1,0 +1,101 @@
+JEE — sample study notes (seed)
+Add real coaching PDFs under data/materials/jee/ then /reindex.
+(Adapted from former jee_neet seed — Physics, Chemistry, Math focus.)
+
+================================================================================
+PHYSICS — KINEMATICS & PROJECTILES
+================================================================================
+
+Scalars vs vectors
+- Distance (scalar) vs displacement (vector). Speed vs velocity.
+- Average velocity = total displacement / total time.
+- Instantaneous velocity is dx/dt; acceleration a = dv/dt.
+
+Equations of motion (constant acceleration a)
+- v = u + a t
+- s = u t + (1/2) a t^2
+- v^2 = u^2 + 2 a s
+- Always pick a positive direction; g ≈ 9.8 m/s^2 downward near Earth.
+
+Projectile motion (level ground, launch speed u at angle θ)
+- ux = u cos θ (constant); uy = u sin θ initially.
+- Time of flight T = (2 u sin θ) / g
+- Maximum height H = (u^2 sin^2 θ) / (2 g)
+- Range R = (u^2 sin 2θ) / g ; maximum range at θ = 45° (same level).
+- Horizontal motion is uniform; vertical motion is accelerated by g.
+
+Worked idea
+- If u = 20 m/s, θ = 30°, g = 10 m/s^2: T = 2 s, H = 5 m, R = 20√3 ≈ 34.6 m.
+
+================================================================================
+PHYSICS — NEWTON & ENERGY
+================================================================================
+
+Newton's laws
+- 1st: inertia — constant velocity unless net force.
+- 2nd: F_net = m a
+- 3rd: action-reaction pairs act on different bodies.
+
+Energy
+- Kinetic K = (1/2) m v^2
+- Gravitational PE near Earth ≈ m g h (choose reference carefully)
+- Work-energy: net work = change in kinetic energy.
+- Conservative forces: path-independent work; mechanical energy conserved if only they do work.
+
+================================================================================
+CHEMISTRY — ATOMIC STRUCTURE & PERIODICITY
+================================================================================
+
+Particles
+- Electron e−, proton p+, neutron n0. Atomic number Z = protons.
+- Mass number A = protons + neutrons. Isotopes: same Z, different A (e.g. C-12, C-14).
+
+Bohr model (hydrogen-like)
+- Electron orbits with quantized energy; absorption/emission when jumping levels.
+- Limitations: fails for multi-electron atoms and fine structure — quantum model needed.
+
+Electron configuration
+- Aufbau: fill lower energy orbitals first.
+- Pauli: max 2 electrons per orbital, opposite spins.
+- Hund: maximize unpaired electrons in degenerate orbitals before pairing.
+- Example: N (Z=7) → 1s2 2s2 2p3 (three unpaired p electrons).
+
+Periodic trends
+- Atomic radius generally decreases across a period (effective nuclear charge ↑).
+- Ionization energy generally increases across a period; decreases down a group.
+- Electronegativity rises toward F.
+
+================================================================================
+CHEMISTRY — MOLES & STOICHIOMETRY
+================================================================================
+
+- 1 mole = 6.022 × 10^23 entities (Avogadro number N_A).
+- n = m / M (moles = mass / molar mass).
+- Molarity M = moles of solute / litres of solution.
+- Limiting reagent: reactant that finishes first and caps product amount.
+- Percent yield = (actual / theoretical) × 100.
+
+Example
+- 18 g water is 1 mol H2O; contains 2 mol H atoms and 1 mol O atoms.
+
+================================================================================
+MATH (JEE) — LIMITS, DERIVATIVES, INTEGRALS
+================================================================================
+
+Limits
+- lim (x→0) (sin x)/x = 1 (x in radians).
+- lim (x→0) (1 − cos x)/x^2 = 1/2.
+- Factor, rationalize, or use standard limits before L'Hôpital when allowed.
+
+Derivatives
+- d/dx (x^n) = n x^(n−1)
+- Product: (uv)' = u'v + uv'
+- Quotient: (u/v)' = (u'v − uv') / v^2
+- Chain: d/dx f(g(x)) = f'(g(x)) · g'(x)
+
+Integrals (brief)
+- ∫ x^n dx = x^(n+1)/(n+1) + C (n ≠ −1)
+- ∫ sin x dx = −cos x + C ; ∫ cos x dx = sin x + C
+- Definite integral = area under curve (signed); FTC links derivatives and integrals.
+
+Exam tip: write Given → Formula → Substitute → Units/box the answer for numericals.

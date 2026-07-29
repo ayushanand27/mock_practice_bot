@@ -1,0 +1,87 @@
+NEET — sample study notes (seed)
+Add real coaching PDFs under data/materials/neet/ then /reindex.
+(Adapted from former jee_neet seed — Physics, Chemistry, Biology focus.)
+
+================================================================================
+PHYSICS — KINEMATICS & PROJECTILES (NEET)
+================================================================================
+
+Scalars vs vectors
+- Distance (scalar) vs displacement (vector). Speed vs velocity.
+- Average velocity = total displacement / total time.
+- Instantaneous velocity is dx/dt; acceleration a = dv/dt.
+
+Equations of motion (constant acceleration a)
+- v = u + a t
+- s = u t + (1/2) a t^2
+- v^2 = u^2 + 2 a s
+- Always pick a positive direction; g ≈ 9.8 m/s^2 downward near Earth.
+
+Projectile motion (level ground, launch speed u at angle θ)
+- ux = u cos θ (constant); uy = u sin θ initially.
+- Time of flight T = (2 u sin θ) / g
+- Maximum height H = (u^2 sin^2 θ) / (2 g)
+- Range R = (u^2 sin 2θ) / g ; maximum range at θ = 45° (same level).
+
+================================================================================
+PHYSICS — NEWTON & ENERGY
+================================================================================
+
+Newton's laws
+- 1st: inertia — constant velocity unless net force.
+- 2nd: F_net = m a
+- 3rd: action-reaction pairs act on different bodies.
+
+Energy
+- Kinetic K = (1/2) m v^2
+- Gravitational PE near Earth ≈ m g h
+- Work-energy: net work = change in kinetic energy.
+
+================================================================================
+CHEMISTRY — ATOMIC STRUCTURE & PERIODICITY
+================================================================================
+
+Particles
+- Electron e−, proton p+, neutron n0. Atomic number Z = protons.
+- Mass number A = protons + neutrons. Isotopes: same Z, different A (e.g. C-12, C-14).
+
+Electron configuration
+- Aufbau, Pauli, Hund rules.
+- Example: N (Z=7) → 1s2 2s2 2p3 (three unpaired p electrons).
+
+Periodic trends
+- Atomic radius generally decreases across a period.
+- Ionization energy generally increases across a period; decreases down a group.
+- Electronegativity rises toward F.
+
+================================================================================
+CHEMISTRY — MOLES & STOICHIOMETRY
+================================================================================
+
+- 1 mole = 6.022 × 10^23 entities (Avogadro number N_A).
+- n = m / M (moles = mass / molar mass).
+- Molarity M = moles of solute / litres of solution.
+- Limiting reagent: reactant that finishes first and caps product amount.
+
+================================================================================
+BIOLOGY (NEET) — CELL & GENETICS
+================================================================================
+
+Cell basics
+- Plasma membrane: phospholipid bilayer, selective permeability, fluid mosaic model.
+- Mitochondria: site of cellular respiration / ATP (powerhouse).
+- Chloroplast (plants): photosynthesis.
+- Nucleus: DNA; nucleolus makes rRNA. Ribosomes: protein synthesis.
+- Endoplasmic reticulum / Golgi: processing and packaging of proteins/lipids.
+
+Cell division
+- Mitosis: identical diploid daughters (growth, repair).
+- Meiosis: haploid gametes; crossing over increases variation.
+- Stages of mitosis: prophase, metaphase, anaphase, telophase (+ cytokinesis).
+
+Genetics
+- Mendel: segregation and independent assortment (with caveats for linked genes).
+- Genotype vs phenotype. Dominant vs recessive alleles.
+- DNA: double helix, A-T and G-C base pairing; replication is semi-conservative.
+
+Exam tip: NEET weights Biology heavily — master NCERT Biology line-by-line, then Physics/Chemistry numericals.

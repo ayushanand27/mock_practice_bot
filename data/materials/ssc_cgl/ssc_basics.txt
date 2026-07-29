@@ -1,0 +1,114 @@
+SSC CGL — sample revision notes (seed)
+Add previous-year PDFs / coaching notes under data/materials/ssc_cgl/ then /reindex.
+
+================================================================================
+QUANTITATIVE APTITUDE
+================================================================================
+
+Percentages
+- x% of y = (x/100) * y.
+- If A increases by r%, multiply by (1 + r/100). Decrease by r%: (1 − r/100).
+- Successive changes: multiply factors. Example: +20% then −20% → ×1.2×0.8 = 0.96 (net −4%).
+
+Ratio and proportion
+- a:b = m:n means a = m k, b = n k for some k.
+- If a/b = c/d then a d = b c (cross multiply).
+- Partnership: profit share ∝ (capital × time).
+
+Simple and compound interest
+- SI = (P × R × T) / 100
+- Amount under SI = P + SI
+- CI annual: A = P (1 + R/100)^T ; CI = A − P
+- For 2 years CI vs SI difference involves interest on first year's interest.
+
+Averages and mixtures
+- Average = sum / count.
+- Combined average of groups: weighted by sizes.
+- Alligation: rule of mixtures for two concentrations.
+
+Time and work
+- If A finishes in a days, rate = 1/a job per day.
+- Together: rates add (if independent).
+- If A is twice as efficient as B, rates 2:1.
+
+Time, speed, distance
+- Speed = distance / time. Units: convert km/h ↔ m/s using ×5/18 or ×18/5.
+- Average speed for equal distances at speeds a and b: 2ab/(a+b) (harmonic mean).
+- Relative speed: same direction |v1−v2|; opposite v1+v2.
+
+Algebra / mensuration (Tier-I flavour)
+- (a+b)^2 = a^2 + 2ab + b^2 ; (a−b)^2 ; a^2 − b^2 = (a−b)(a+b).
+- Area circle π r^2 ; circumference 2 π r.
+- Triangle area (1/2) base × height; Pythagoras for right triangles.
+
+Numerical drill examples
+- SI on 5000 at 10% for 2 years = 1000; amount = 6000.
+- 60 km/h = 60 × 5/18 = 50/3 m/s ≈ 16.67 m/s.
+
+================================================================================
+GENERAL INTELLIGENCE & REASONING
+================================================================================
+
+Series
+- Number series: +/− constant, ×/÷, alternating patterns, squares/cubes.
+- Letter series: positional shifts in alphabet (A=1 … Z=26).
+
+Coding-decoding
+- Shift cipher (each letter +k), reverse order, or symbol mapping.
+- Always test the rule on the given example before applying to the question.
+
+Blood relations
+- Draw a small family tree; mark generations clearly.
+- Maternal/paternal uncle/aunt, cousin definitions matter.
+
+Syllogisms
+- Use Venn diagrams. "All A are B", "Some A are B", "No A is B".
+- Conclusions must follow in all possible diagrams (possibility vs certainty).
+
+Directions & seating
+- Track facing and left/right carefully; redraw after each turn.
+- Circular seating: usually facing centre unless stated; left/right from person's view.
+
+================================================================================
+ENGLISH COMPREHENSION
+================================================================================
+
+Error spotting
+- Subject-verb agreement; articles (a/an/the); prepositions; tense consistency.
+- Pronoun reference and parallel structure.
+
+Vocab
+- Synonyms / antonyms: high-frequency SSC lists + roots/prefixes.
+- One-word substitution and idioms: learn in small daily batches.
+
+Cloze & RC
+- Cloze: grammar + context decide the blank.
+- Reading comprehension: answer only from the passage; avoid outside knowledge.
+- Tone questions: objective, critical, optimistic, etc.
+
+================================================================================
+GENERAL AWARENESS
+================================================================================
+
+Polity
+- Constitution: Preamble, Fundamental Rights, DPSPs, Fundamental Duties.
+- Parliament: Lok Sabha, Rajya Sabha; President, PM, Council of Ministers.
+- Supreme Court / High Courts — basic jurisdiction ideas.
+
+Geography
+- Major rivers (Ganga, Yamuna, Godavari, Krishna, Narmada, Brahmaputra).
+- Himalayas / Western Ghats; monsoon basics; soil types intro.
+
+Economy
+- GDP, inflation, fiscal deficit (definitions).
+- RBI roles; budget highlights (revise current year from reliable summaries).
+
+Science & static GK
+- Everyday physics/chemistry/biology one-liners (SI units, vitamins, diseases).
+- Awards, books/authors, important days — revise from a trusted static GK capsule.
+
+Current affairs
+- Last 6–12 months: national schemes, sports, appointments, international summits.
+- Prefer monthly compilations over random scrolling.
+
+Exam tip (Tier-I): accuracy beats volume under negative marking; skip traps and return if time permits.

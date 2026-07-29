@@ -1,0 +1,126 @@
+Placement Prep — BTech CSE (sample seed notes)
+Replace or add PDFs under data/materials/placement/ then run /reindex.
+
+================================================================================
+DATA STRUCTURES
+================================================================================
+
+Arrays
+- Contiguous memory; index access O(1).
+- Insert/delete in the middle is O(n) because elements shift.
+- Cache-friendly due to locality. Use when size is known and random access matters.
+
+Linked Lists
+- Nodes hold data + next (and prev for doubly linked).
+- Insert/delete at head is O(1); search is O(n).
+- No random access. Prefer when frequent inserts/deletes at known positions.
+
+Stacks (LIFO)
+- Operations: push, pop, peek — all O(1) amortized with array or linked list.
+- Uses: DFS recursion simulation, undo history, balanced parentheses, postfix evaluation.
+- Example: matching brackets — push opens, pop on close and compare types.
+
+Queues (FIFO)
+- Enqueue at rear, dequeue at front.
+- Uses: BFS, OS scheduling, printer queues, sliding-window problems.
+- Circular queue avoids wasted space in fixed arrays.
+
+Hash Maps / Dictionaries
+- Average O(1) get/put via hash(key) mod table_size.
+- Collisions: chaining (linked lists) or open addressing.
+- Worst case O(n) if many collisions. Choose good hash and load factor.
+
+Trees
+- Binary Search Tree: left < root < right. Search/insert O(h); balanced h = O(log n).
+- Unbalanced BST can degrade to O(n) (sorted inserts).
+- AVL / Red-Black keep balance. Heaps are complete binary trees for priority queues.
+- Binary heap: insert and extract-min/max in O(log n); peek O(1).
+
+Graphs
+- Adjacency list: space O(V+E), good for sparse graphs.
+- Adjacency matrix: O(V^2) space, O(1) edge check, good for dense graphs.
+- BFS: shortest path in unweighted graphs (O(V+E)).
+- DFS: connectivity, cycles, topological order on DAGs.
+- Dijkstra: non-negative weighted shortest paths.
+
+Complexity cheat sheet
+- Know Big-O of common ops; explain trade-offs (time vs space) with an example.
+
+================================================================================
+OPERATING SYSTEMS
+================================================================================
+
+Process vs Thread
+- Process: own address space, heavier context switch.
+- Thread: shares process memory; lighter; needs synchronization for shared data.
+
+Scheduling
+- FCFS: simple, convoy effect.
+- SJF: optimal average waiting (needs known burst times).
+- Round Robin: time quantum; fair for interactive systems.
+- Priority: starvation risk — mitigate with aging.
+
+Synchronization
+- Race condition: concurrent access to shared data without proper locking.
+- Mutex / semaphore / monitors protect critical sections.
+- Deadlock conditions (Coffman): mutual exclusion, hold-and-wait, no preemption, circular wait.
+- Prevention: break one condition (e.g. resource ordering). Detection: wait-for graph.
+
+Memory
+- Virtual memory via paging; page fault when page not in RAM.
+- TLB caches page-table translations.
+- Thrashing: too much paging; working set too large for RAM.
+
+================================================================================
+DBMS
+================================================================================
+
+ACID
+- Atomicity: all-or-nothing transaction.
+- Consistency: DB moves between valid states.
+- Isolation: concurrent txs do not interfere incorrectly.
+- Durability: committed data survives crashes (WAL / redo logs).
+
+Normalization
+- 1NF: atomic attributes, no repeating groups.
+- 2NF: 1NF + no partial dependency on a composite key.
+- 3NF: 2NF + no transitive dependency of non-key on key.
+- Goal: reduce redundancy and update anomalies; sometimes denormalize for reads.
+
+Indexes and transactions
+- B-tree / B+ tree indexes speed equality and range lookups; slow writes slightly.
+- Isolation levels: READ UNCOMMITTED, READ COMMITTED, REPEATABLE READ, SERIALIZABLE.
+- Higher isolation → fewer anomalies, more locking / abort risk.
+
+SQL patterns
+- JOINs combine tables; GROUP BY aggregates; WHERE filters rows; HAVING filters groups.
+- Primary key uniquely identifies rows; foreign key enforces referential integrity.
+
+================================================================================
+COMPUTER NETWORKS
+================================================================================
+
+Layer models
+- OSI: 7 layers (Physical → Application). TCP/IP: Link, Internet, Transport, Application.
+- IP: best-effort packet delivery. TCP: reliable, ordered byte stream (handshake, ACKs, retransmission).
+- UDP: datagrams, no connection; used for DNS, video, gaming where latency matters.
+
+HTTP / DNS
+- HTTP request-response; methods GET, POST, PUT, DELETE. Stateless; cookies/sessions add state.
+- HTTPS = HTTP over TLS (encryption + authenticity).
+- DNS resolves domain names to IP addresses (often UDP/53).
+
+================================================================================
+OOP & SYSTEM DESIGN BASICS
+================================================================================
+
+OOP pillars: encapsulation, abstraction, inheritance, polymorphism.
+- Prefer composition over deep inheritance.
+- SOLID: single responsibility, open/closed, Liskov, interface segregation, dependency inversion.
+
+System design starter
+- Clarify requirements, estimate scale (QPS, storage), draw high-level boxes.
+- Cache hot reads (Redis); use load balancers; design for idempotent writes.
+- CAP reminder: under partition, choose consistency or availability trade-offs.
+
+Interview tip: state assumptions, complexity, edge cases, and one concrete example.

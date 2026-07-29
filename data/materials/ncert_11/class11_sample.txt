@@ -1,0 +1,67 @@
+NCERT Class 11 — sample summaries (seed)
+Official NCERT PDFs are free; drop chapter PDFs into data/materials/ncert_11/ then /reindex.
+This seed is NOT a substitute for full NCERT textbooks.
+(Split from former ncert seed — Class 11 sections only.)
+
+================================================================================
+CLASS 11 PHYSICS — UNITS, MEASUREMENTS, MOTION
+================================================================================
+
+SI base units
+- metre (m), kilogram (kg), second (s), ampere (A), kelvin (K), mole (mol), candela (cd).
+- Derived examples: newton N = kg m/s^2 ; joule J = N m ; watt W = J/s.
+
+Dimensional analysis
+- Check equation consistency: both sides same dimensions.
+- Example: v^2 = u^2 + 2 a s → [L^2 T^-2] on each term.
+- Cannot find dimensionless constants (like 1/2 in s = ut + 1/2 at^2) from dimensions alone.
+
+Significant figures
+- Reflect measurement precision; multiplication/division → least number of sig figs.
+- Addition/subtraction → least decimal places.
+
+Motion in a straight line (links to kinematics)
+- Position, displacement, velocity, acceleration graphs.
+- Area under v-t graph = displacement; slope of v-t = acceleration.
+
+================================================================================
+CLASS 11 CHEMISTRY — BASIC CONCEPTS & STRUCTURE
+================================================================================
+
+Mole concept
+- 1 mole = 6.022 × 10^23 entities.
+- Molar mass links grams ↔ moles. Molar volume of ideal gas at STP ≈ 22.4 L/mol (older STP convention used in many NCERT problems).
+
+Empirical vs molecular formula
+- Empirical: simplest whole-number ratio of atoms.
+- Molecular: actual count; molecular mass / empirical mass = integer multiplier.
+
+Stoichiometry
+- Balanced equation → mole ratios.
+- Limiting reagent decides maximum product.
+- Concentration: molarity (mol/L), molality (mol/kg solvent) — molality independent of temperature.
+
+Atomic structure (board focus)
+- Quantum numbers: n, l, m_l, m_s.
+- Orbitals: s, p, d, f shapes/orientations at intro level.
+- Electronic configuration using Aufbau, Hund, Pauli.
+
+================================================================================
+CLASS 11 BIOLOGY — DIVERSITY & CELL
+================================================================================
+
+The Living World
+- Taxonomy: classification + nomenclature.
+- Binomial nomenclature: Genus species (e.g. Homo sapiens) — Genus capitalised, species lowercase, italicised in print.
+- Hierarchy: Kingdom → Phylum/Division → Class → Order → Family → Genus → Species.
+
+Cell: The Unit of Life
+- Prokaryotic vs eukaryotic: nucleus, membrane-bound organelles.
+- Plant cell: cell wall (cellulose), chloroplasts, large vacuole; animal cell: centrioles often present.
+- Plasma membrane: fluid mosaic; selective transport (diffusion, osmosis, active transport).
+
+Biomolecules (intro)
+- Carbohydrates, proteins, lipids, nucleic acids — monomers and roles.
+- Enzymes: biocatalysts; affected by temperature and pH.
+
+Study tip: NCERT in-text questions and examples are high-yield for CBSE Class 11. Prefer official chapter PDFs over this seed for real prep.

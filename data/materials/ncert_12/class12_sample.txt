@@ -1,0 +1,49 @@
+NCERT Class 12 — sample summaries (seed)
+Official NCERT PDFs are free; drop chapter PDFs into data/materials/ncert_12/ then /reindex.
+This seed is NOT a substitute for full NCERT textbooks.
+(Split from former ncert seed — Class 12 sections only.)
+
+================================================================================
+CLASS 12 PHYSICS — ELECTROSTATICS & CURRENT
+================================================================================
+
+Coulomb's law
+- F = k |q1 q2| / r^2 ; k = 1/(4 π ε0) ≈ 9 × 10^9 N m^2/C^2.
+- Electric field E = F/q (force on a unit positive test charge).
+- Potential V: work per unit charge by external agent (slowly) without KE change; E related to −dV/dx in 1D.
+
+Capacitance
+- C = Q/V. Parallel plate C = ε0 A / d (vacuum).
+- Capacitors store energy U = (1/2) C V^2 = Q^2/(2C).
+- Series: 1/C = Σ 1/Ci ; Parallel: C = Σ Ci.
+
+Current electricity
+- Ohm's law: V = I R (ohmic). Resistance R = ρ L / A.
+- Kirchhoff: junction current sum 0; loop voltage sum 0.
+- Series resistors add; parallel: 1/R = Σ 1/Ri.
+
+================================================================================
+CLASS 12 CHEMISTRY — SOLUTIONS & ELECTROCHEMISTRY (INTRO)
+================================================================================
+
+Solutions
+- Molarity, molality, mole fraction, ppm.
+- Raoult's law: for ideal solutions, p_i = x_i p_i° (vapour pressure lowering).
+- Colligative properties depend on number of solute particles: relative lowering of vapour pressure, boiling point elevation, freezing point depression, osmotic pressure.
+- van't Hoff factor i accounts for dissociation/association.
+
+Electrochemistry (high level)
+- Galvanic cell: spontaneous redox → electrical energy.
+- Electrolytic cell: electrical energy drives non-spontaneous reaction.
+- Nernst equation adjusts cell potential for non-standard concentrations.
+
+================================================================================
+CLASS 12 BIOLOGY — REPRODUCTION & GENETICS (BOARD HIGHLIGHTS)
+================================================================================
+
+- Sexual vs asexual reproduction; gametogenesis overview.
+- Mendelian inheritance; pedigree charts; sex-linked traits (e.g. colour blindness, haemophilia patterns).
+- DNA structure, replication, transcription, translation (central dogma overview).
+- Biotechnology: PCR, gel electrophoresis, cloning vectors — definition-level for boards.
+
+Study tip: NCERT in-text questions and examples are high-yield for CBSE Class 12 and a base for entrance exams. Prefer official chapter PDFs over this seed for real prep.
