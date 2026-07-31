@@ -61,10 +61,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message:
         await update.message.reply_text(
             f"Hi {name}! 👋{streak_line}\n\n"
-            "Your personal exam coach on Telegram:\n"
-            "• Learn concepts from your notes (RAG)\n"
-            "• Practice MCQ / MSQ / Numerical / Theory\n"
-            "• Track streak, daily goal & mistakes\n\n"
+            "Your exam coach on Telegram:\n"
+            "1) Pick a category\n"
+            "2) Pick a topic/chapter\n"
+            "3) Learn · Test · Practice mistakes\n"
+            "4) End test → session report\n\n"
+            "Upload PDFs anytime to improve answers.\n"
             "Pick a category to begin:",
             reply_markup=categories_keyboard(),
         )

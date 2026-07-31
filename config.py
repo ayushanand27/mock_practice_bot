@@ -29,6 +29,54 @@ TEST_TYPES = (
     ("Theoretical", "theory"),
 )
 
+# Per-category topic/chapter chips (slug -> label). Used for Learn/Test focus.
+CATEGORY_TOPICS: dict[str, list[tuple[str, str]]] = {
+    "placement": [
+        ("dsa", "DSA / Algorithms"),
+        ("dbms", "DBMS / SQL"),
+        ("os", "Operating Systems"),
+        ("cn", "Computer Networks"),
+        ("oop", "OOP / Java"),
+        ("sys", "System Design"),
+    ],
+    "jee": [
+        ("phys", "Physics"),
+        ("chem", "Chemistry"),
+        ("math", "Mathematics"),
+    ],
+    "neet": [
+        ("bio", "Biology"),
+        ("phys", "Physics"),
+        ("chem", "Chemistry"),
+    ],
+    "ncert_11": [
+        ("phys", "Physics"),
+        ("chem", "Chemistry"),
+        ("math", "Maths"),
+        ("bio", "Biology"),
+    ],
+    "ncert_12": [
+        ("phys", "Physics"),
+        ("chem", "Chemistry"),
+        ("math", "Maths"),
+        ("bio", "Biology"),
+    ],
+    "ssc_cgl": [
+        ("quant", "Quantitative"),
+        ("reason", "Reasoning"),
+        ("eng", "English"),
+        ("gk", "GK / GA"),
+    ],
+    "upsc": [
+        ("polity", "Polity"),
+        ("hist", "History"),
+        ("geo", "Geography"),
+        ("econ", "Economy"),
+        ("env", "Environment"),
+        ("ca", "Current Affairs"),
+    ],
+}
+
 SUPPORTED_EXTS = {".pdf", ".txt", ".md"}
 
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
@@ -39,6 +87,15 @@ TOP_K = 4
 
 def category_label(category_id: str) -> str:
     return CATEGORIES.get(category_id, (category_id, category_id))[0]
+
+
+def topic_label(category_id: str, topic_slug: str | None) -> str:
+    if not topic_slug:
+        return "All topics"
+    for slug, label in CATEGORY_TOPICS.get(category_id, []):
+        if slug == topic_slug:
+            return label
+    return topic_slug
 
 
 def materials_path(category_id: str) -> Path:

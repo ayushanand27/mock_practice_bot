@@ -12,7 +12,7 @@ from telegram.constants import ChatAction
 from telegram.error import BadRequest
 from telegram.ext import ContextTypes
 
-from config import CATEGORIES, SUPPORTED_EXTS, category_label, uploads_path
+from config import CATEGORIES, SUPPORTED_EXTS, category_label, topic_label, uploads_path
 from keyboards import (
     categories_keyboard,
     difficulty_keyboard,
@@ -21,11 +21,12 @@ from keyboards import (
     mode_keyboard,
     test_controls_keyboard,
     test_types_keyboard,
+    topics_keyboard,
     upload_category_keyboard,
 )
 from rag import pipeline
 from rag import store as rag_store
-from services import groq_service, progress_store, rate_limit, study_state
+from services import groq_service, progress_store, rate_limit, sarvam_service, study_state
 
 logger = logging.getLogger(__name__)
 
@@ -86,11 +87,44 @@ def _chunk_count(category: str) -> int:
 def _empty_materials_note(category: str) -> str:
     n = _chunk_count(category)
     if n > 0:
-        return f"Indexed chunks: {n}."
+        return f"Indexed chunks: {n}. Upload more PDFs anytime for stronger answers."
     return (
-        "⚠️ Few/no materials indexed yet — answers may be weaker. "
-        "Upload a PDF or add files under data/materials, then /reindex."
+        "⚠️ No materials indexed yet for this category.\n"
+        "• In Telegram: Upload → pick category → send PDF\n"
+        "• Or drop files in data/materials/{folder}/ then /reindex"
     )
+
+
+def _focus_hint(sess: study_state.StudySession) -> str:
+    if not sess.category:
+        return ""
+    return f"Focus: {topic_label(sess.category, sess.topic)}"
+
+
+def format_session_report(sess: study_state.StudySession) -> str:
+    total = sess.score_total
+    correct = sess.score_correct
+    if total == 0:
+        return "Session report: no questions answered."
+    acc = 100 * correct / total
+    lines = [
+        "📋 Session report",
+        f"Score: {correct}/{total} ({acc:.0f}%)",
+        f"Category: {category_label(sess.category or '')}",
+        _focus_hint(sess),
+        f"Difficulty: {sess.difficulty}",
+    ]
+    wrongs = [x for x in sess.session_log if not x.get("correct")]
+    if wrongs:
+        lines.append(f"\nMissed ({len(wrongs)}):")
+        for i, w in enumerate(wrongs[:5], 1):
+            lines.append(f"{i}. [{w.get('qtype')}] {str(w.get('prompt') or '')[:120]}")
+        if len(wrongs) > 5:
+            lines.append(f"…and {len(wrongs) - 5} more (see Review)")
+    else:
+        lines.append("\nPerfect session — no mistakes 🔥")
+    lines.append("\nTip: tap 🎯 Practice mistakes to drill what you missed.")
+    return "\n".join(lines)
 
 
 async def study_home(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -165,6 +199,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             return True
         sess = study_state.get(uid)
         sess.category = cat
+        sess.topic = None
         sess.mode = None
         sess.awaiting_answer = False
         sess.awaiting_upload_category = False
@@ -172,14 +207,67 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await query.edit_message_text(
             f"Category: *{category_label(cat)}*\n\n"
             f"{_empty_materials_note(cat)}\n\n"
-            "Learn from docs, or take a test.",
+            "Pick a *topic/chapter* (or All topics):",
+            reply_markup=topics_keyboard(cat),
+            parse_mode="Markdown",
+        )
+        return True
+
+    if data.startswith("top:"):
+        # top:ncert_11:phys | top:ncert_11:all
+        parts = data.split(":")
+        if len(parts) != 3:
+            await _answer(query)
+            return True
+        _, cat, topic = parts
+        if cat not in CATEGORIES:
+            await _answer(query, "Unknown category")
+            return True
+        sess = study_state.get(uid)
+        sess.category = cat
+        sess.topic = None if topic == "all" else topic
+        sess.mode = None
+        await _answer(query)
+        await query.edit_message_text(
+            f"*{category_label(cat)}* · {_focus_hint(sess)}\n\n"
+            f"{_empty_materials_note(cat)}\n\n"
+            "Choose Learn, Test, or Practice mistakes:",
             reply_markup=mode_keyboard(cat),
             parse_mode="Markdown",
         )
         return True
 
+    if data == "study:retopic":
+        sess = study_state.get(uid)
+        if not sess.category:
+            await study_home(update, context)
+            return True
+        await _answer(query)
+        await query.edit_message_text(
+            f"Pick a topic for *{category_label(sess.category)}*:",
+            reply_markup=topics_keyboard(sess.category),
+            parse_mode="Markdown",
+        )
+        return True
+
+    if data == "study:mistakes_now":
+        sess = study_state.get(uid)
+        cat = sess.category
+        if not cat:
+            await _answer(query, "Pick a category first")
+            await study_home(update, context)
+            return True
+        await _answer(query)
+        await _start_mistakes_practice(update, context, cat)
+        return True
+
+    if data == "learn:voice":
+        await _answer(query, "Generating voice…")
+        await _speak_last_learn(update, context)
+        return True
+
     if data.startswith("mode:"):
-        # mode:learn:placement | mode:test:placement
+        # mode:learn:placement | mode:test:placement | mode:mistakes:placement
         parts = data.split(":")
         if len(parts) != 3:
             await _answer(query)
@@ -190,25 +278,29 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             return True
         sess = study_state.get(uid)
         sess.category = cat
-        sess.mode = mode
         sess.awaiting_answer = False
         sess.current_question = None
         sess.awaiting_upload_category = False
         await _answer(query)
+        if mode == "mistakes":
+            await _start_mistakes_practice(update, context, cat)
+            return True
+        sess.mode = mode
         if mode == "learn":
             await query.edit_message_text(
-                f"📖 *Learn — {category_label(cat)}*\n\n"
+                f"📖 *Learn — {category_label(cat)}*\n"
+                f"{_focus_hint(sess)}\n\n"
                 f"{_empty_materials_note(cat)}\n\n"
-                "Ask any concept question. I'll answer from your study materials "
-                "and cite sources.\n"
-                "Examples: \"What is ACID?\", \"Explain projectile motion\".\n"
-                "Send /study to switch category.",
+                "Ask any concept question. I'll answer from your materials "
+                "(and can speak the answer — 🔊 Hear answer).\n"
+                "Examples: \"What is ACID?\", \"Explain projectile motion\".",
                 parse_mode="Markdown",
                 reply_markup=learn_controls_keyboard(),
             )
         else:
             await query.edit_message_text(
                 f"📝 *Test — {category_label(cat)}*\n"
+                f"{_focus_hint(sess)}\n"
                 f"{_empty_materials_note(cat)}\n\nChoose question type:",
                 parse_mode="Markdown",
                 reply_markup=test_types_keyboard(cat),
@@ -280,16 +372,12 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if data == "test:end":
         sess = study_state.get(uid)
-        summary = (
-            f"Test ended.\nSession score: {sess.score_correct}/{sess.score_total}\n\n"
-            f"{progress_store.format_stats(uid)}"
-            if sess.score_total
-            else "Test ended — no questions answered."
-        )
+        report = format_session_report(sess)
+        stats = progress_store.format_stats(uid)
         study_state.reset_mode(uid)
         study_state.reset_score(uid)
         await _answer(query)
-        await query.edit_message_text(_clip(summary))
+        await query.edit_message_text(_clip(f"{report}\n\n{stats}"))
         await _reply(update, "Back to categories:", reply_markup=categories_keyboard())
         return True
 
@@ -335,7 +423,8 @@ async def show_review(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if not items:
         await _reply(
             update,
-            "No saved mistakes yet. Wrong test answers are stored for review.",
+            "No saved mistakes yet. Wrong test answers are stored for review.\n"
+            "After a few mistakes, use 🎯 Practice mistakes.",
             reply_markup=main_reply_keyboard(),
         )
         return
@@ -346,7 +435,85 @@ async def show_review(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             f"Q: {w.get('prompt')}\n"
             f"Hint: {w.get('explanation') or '—'}\n"
         )
+    lines.append("Use Study → category → 🎯 Practice mistakes to drill these.")
     await _reply(update, "\n".join(lines), reply_markup=main_reply_keyboard())
+
+
+async def _start_mistakes_practice(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, cat: str
+) -> None:
+    uid = _uid(update)
+    wrongs = [
+        w
+        for w in progress_store.list_wrong(uid, limit=30)
+        if w.get("category") == cat or True  # allow cross-category drill
+    ]
+    # Prefer same category; fall back to any
+    same = [w for w in wrongs if w.get("category") == cat]
+    pool = same or wrongs
+    if not pool:
+        await _reply(
+            update,
+            "No mistakes saved yet for practice. Take a Test first, then come back.",
+            reply_markup=mode_keyboard(cat),
+        )
+        return
+    study_state.begin_test(uid, cat, "theory", mode="mistakes", difficulty="medium")
+    sess = study_state.get(uid)
+    item = pool[-1]
+    # Convert stored mistake into a revisit question
+    q = {
+        "type": "theory",
+        "prompt": (
+            "Revisit this missed question — answer again carefully:\n\n"
+            f"{item.get('prompt')}"
+        ),
+        "options": None,
+        "correct": item.get("explanation") or "See notes",
+        "explanation": item.get("explanation") or "",
+    }
+    sess.current_question = q
+    sess.awaiting_answer = True
+    sess.test_type = "theory"
+    sess.history.append(str(item.get("prompt") or "")[:200])
+    await _reply(
+        update,
+        f"🎯 Mistakes practice ({len(pool)} saved)\n\n{q['prompt']}\n\n"
+        "Write your improved answer.",
+        reply_markup=test_controls_keyboard(),
+    )
+
+
+async def _speak_last_learn(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    uid = _uid(update)
+    sess = study_state.get(uid)
+    text = (sess.last_learn_answer or "").strip()
+    if not text:
+        await _reply(update, "Ask a Learn question first, then tap 🔊 Hear answer.")
+        return
+    if not sarvam_service.is_configured():
+        await _reply(update, "Voice needs SARVAM_API_KEY (already used for interview).")
+        return
+    await _reply(update, "🔊 Preparing audio…")
+    try:
+        audio = await sarvam_service.text_to_speech(text[:1500])
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("learn TTS failed: %s", exc)
+        await _reply(update, f"Voice failed: {exc}")
+        return
+    if not audio:
+        await _reply(update, "Could not generate audio right now.")
+        return
+    chat = update.effective_chat
+    if not chat:
+        return
+    from io import BytesIO
+
+    bio = BytesIO(audio)
+    bio.name = "learn.ogg"
+    await context.bot.send_voice(chat_id=chat.id, voice=bio)
 
 
 async def _send_test_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -354,6 +521,10 @@ async def _send_test_question(update: Update, context: ContextTypes.DEFAULT_TYPE
     sess = study_state.get(uid)
     if not sess.category or not sess.test_type:
         await _reply(update, "Pick a category and test type first.", reply_markup=categories_keyboard())
+        return
+
+    if sess.mode == "mistakes":
+        await _start_mistakes_practice(update, context, sess.category)
         return
 
     if not rate_limit.allow(f"test:{uid}", max_hits=20, window_sec=60):
@@ -364,7 +535,8 @@ async def _send_test_question(update: Update, context: ContextTypes.DEFAULT_TYPE
     await _typing(update, context)
     await _reply(
         update,
-        f"⏳ Preparing {sess.difficulty} {sess.test_type.upper()} question…",
+        f"⏳ Preparing {sess.difficulty} {sess.test_type.upper()} "
+        f"({topic_label(sess.category, sess.topic)})…",
     )
     hint = {
         "mcq": "important multiple choice concept",
@@ -372,6 +544,8 @@ async def _send_test_question(update: Update, context: ContextTypes.DEFAULT_TYPE
         "numerical": "formula or numerical problem",
         "theory": "explain a core concept",
     }.get(sess.test_type, "core syllabus topic")
+    if sess.topic:
+        hint = f"{topic_label(sess.category, sess.topic)} {hint}"
 
     try:
         ctx = await asyncio.to_thread(pipeline.context_for_topic, sess.category, hint)
@@ -413,7 +587,10 @@ async def _send_test_question(update: Update, context: ContextTypes.DEFAULT_TYPE
     prompt = q.get("prompt", "")
     sess.history.append(prompt[:200])
 
-    lines = [f"{sess.test_type.upper()} · {sess.difficulty}\n{prompt}"]
+    lines = [
+        f"{sess.test_type.upper()} · {sess.difficulty} · "
+        f"{topic_label(sess.category, sess.topic)}\n{prompt}"
+    ]
     options = q.get("options") or []
     if options:
         lines.append("")
@@ -428,7 +605,6 @@ async def _send_test_question(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         lines.append("\nWrite your answer in a few sentences.")
 
-    # Avoid Markdown — LLM prompts often contain _ * ` that break Telegram parse_mode
     plain = "\n".join(lines).replace("*", "")
     await _reply(
         update,
@@ -451,14 +627,14 @@ async def handle_study_text(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         )
         return True
 
-    if sess.mode == "test" and sess.awaiting_answer and sess.current_question:
+    if sess.mode in {"test", "mistakes"} and sess.awaiting_answer and sess.current_question:
         await _grade_and_reply(update, context, text)
         return True
 
-    if sess.mode == "test" and not sess.awaiting_answer:
+    if sess.mode in {"test", "mistakes"} and not sess.awaiting_answer:
         await _reply(
             update,
-            "Tap Next question for another, or End test.",
+            "Tap Next question for another, or End + report.",
             reply_markup=test_controls_keyboard(),
         )
         return True
@@ -475,26 +651,39 @@ async def _learn_answer(
 ) -> None:
     uid = _uid(update)
     sess = study_state.get(uid)
-    if not groq_service.is_configured():
-        await _reply(update, "GROQ_API_KEY is missing — cannot answer.")
-        return
     if not rate_limit.allow(f"learn:{uid}", max_hits=15, window_sec=60):
         wait = rate_limit.retry_after(f"learn:{uid}", window_sec=60)
         await _reply(update, f"Too many questions — wait ~{wait}s.")
         return
     await _typing(update, context)
     await _reply(update, "⏳ Searching materials…")
+    question = text
+    if sess.topic:
+        question = f"{topic_label(sess.category or '', sess.topic)}: {text}"
     try:
         answer = await asyncio.to_thread(
             pipeline.answer_question,
             sess.category or "placement",
-            text,
+            question,
         )
     except Exception as exc:
         logger.exception("learn answer failed: %s", exc)
         await _reply(update, f"Error: {exc}")
         return
+    sess.last_learn_answer = answer
     await _reply(update, answer, reply_markup=learn_controls_keyboard())
+    # Optional auto voice for shorter answers
+    if sess.voice_learn and sarvam_service.is_configured() and len(answer) < 900:
+        try:
+            audio = await sarvam_service.text_to_speech(answer[:1200])
+            if audio and update.effective_chat:
+                from io import BytesIO
+
+                bio = BytesIO(audio)
+                bio.name = "learn.ogg"
+                await context.bot.send_voice(chat_id=update.effective_chat.id, voice=bio)
+        except Exception as exc:  # noqa: BLE001
+            logger.info("auto voice skipped: %s", exc)
 
 
 def _theory_counts_correct(result: str) -> bool:
@@ -546,6 +735,15 @@ async def _grade_and_reply(
     if ok:
         sess.score_correct += 1
 
+    sess.session_log.append(
+        {
+            "correct": ok,
+            "qtype": qtype,
+            "prompt": str(q.get("prompt") or "")[:300],
+            "topic": sess.topic,
+        }
+    )
+
     progress_store.record_answer(
         uid,
         category=sess.category or "unknown",
@@ -555,6 +753,10 @@ async def _grade_and_reply(
         explanation=str(q.get("explanation") or result[:200]),
         student_answer=text,
     )
+
+    # If mistakes mode and answered, drop one from stored wrongs when correct
+    if sess.mode == "mistakes" and ok:
+        progress_store.pop_wrong(uid, n=1)
 
     stats = progress_store.get_stats(uid)
     goal = int(stats.get("daily_goal") or 10)

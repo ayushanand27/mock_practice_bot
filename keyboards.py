@@ -2,7 +2,7 @@
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 
-from config import CATEGORIES, TEST_TYPES
+from config import CATEGORIES, CATEGORY_TOPICS, TEST_TYPES
 
 MAIN_MENU_LABELS = (
     "📚 Study",
@@ -33,6 +33,24 @@ def categories_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(rows)
 
 
+def topics_keyboard(category_id: str) -> InlineKeyboardMarkup:
+    topics = CATEGORY_TOPICS.get(category_id, [])
+    rows: list[list[InlineKeyboardButton]] = []
+    row: list[InlineKeyboardButton] = []
+    for slug, label in topics:
+        row.append(InlineKeyboardButton(label, callback_data=f"top:{category_id}:{slug}"))
+        if len(row) == 2:
+            rows.append(row)
+            row = []
+    if row:
+        rows.append(row)
+    rows.append(
+        [InlineKeyboardButton("📚 All topics", callback_data=f"top:{category_id}:all")]
+    )
+    rows.append([InlineKeyboardButton("← Categories", callback_data="study:home")])
+    return InlineKeyboardMarkup(rows)
+
+
 def mode_keyboard(category_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
@@ -41,10 +59,18 @@ def mode_keyboard(category_id: str) -> InlineKeyboardMarkup:
                 InlineKeyboardButton("📝 Test", callback_data=f"mode:test:{category_id}"),
             ],
             [
-                InlineKeyboardButton("📊 Progress", callback_data="study:stats"),
-                InlineKeyboardButton("📝 Review mistakes", callback_data="study:review"),
+                InlineKeyboardButton(
+                    "🎯 Practice mistakes", callback_data=f"mode:mistakes:{category_id}"
+                ),
             ],
-            [InlineKeyboardButton("← Categories", callback_data="study:home")],
+            [
+                InlineKeyboardButton("📊 Progress", callback_data="study:stats"),
+                InlineKeyboardButton("📝 Review list", callback_data="study:review"),
+            ],
+            [
+                InlineKeyboardButton("Change topic", callback_data=f"cat:{category_id}"),
+                InlineKeyboardButton("← Categories", callback_data="study:home"),
+            ],
         ]
     )
 
@@ -75,10 +101,14 @@ def learn_controls_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("Change category", callback_data="study:home"),
+                InlineKeyboardButton("🔊 Hear answer", callback_data="learn:voice"),
                 InlineKeyboardButton("Switch to Test", callback_data="study:switch_test"),
             ],
-            [InlineKeyboardButton("📊 Progress", callback_data="study:stats")],
+            [
+                InlineKeyboardButton("Change topic", callback_data="study:retopic"),
+                InlineKeyboardButton("📊 Progress", callback_data="study:stats"),
+            ],
+            [InlineKeyboardButton("← Categories", callback_data="study:home")],
         ]
     )
 
@@ -91,8 +121,8 @@ def test_controls_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton("Change type", callback_data="test:change_type"),
             ],
             [
-                InlineKeyboardButton("End test", callback_data="test:end"),
-                InlineKeyboardButton("📝 Review mistakes", callback_data="study:review"),
+                InlineKeyboardButton("End + report", callback_data="test:end"),
+                InlineKeyboardButton("🎯 Mistakes only", callback_data="study:mistakes_now"),
             ],
             [InlineKeyboardButton("← Categories", callback_data="study:home")],
         ]

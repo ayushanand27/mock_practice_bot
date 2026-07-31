@@ -1,0 +1,19 @@
+# Where to put study PDFs / notes
+#
+# Local project (before deploy):
+#   data/materials/placement/
+#   data/materials/jee/
+#   data/materials/neet/
+#   data/materials/ncert_11/
+#   data/materials/ncert_12/
+#   data/materials/ssc_cgl/
+#   data/materials/upsc/
+#
+# Then: /reindex in Telegram  (or restart bot)
+#
+# Or in Telegram: Upload → pick category → send PDF/txt/md (auto-indexes)
+#
+# Azure server path (same folders after git pull / upload):
+#   /home/azureuser/mock_practice_bot/data/materials/<category>/
+#
+# Tip: name files clearly, e.g. ncert_11_physics_ch3.pdf
