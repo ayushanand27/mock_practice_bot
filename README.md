@@ -4,21 +4,77 @@ Study from your own materials with **RAG**, then take **MCQ / MSQ / Numerical / 
 
 **Live bot:** [@mock_practice_bot](https://t.me/mock_practice_bot)  
 **Repo:** https://github.com/ayushanand27/mock_practice_bot  
-**Hosted on:** Azure VM (Always Free / Students) — systemd service `mock-practice-bot`
+**Hosted on:** Azure VM (`104.208.98.207`, East Asia) — systemd service `mock-practice-bot`
 
 ---
 
-## Categories (7)
+## What we're building
 
-1. Placement (BTech CSE)  
-2. JEE  
-3. NEET  
-4. Class 11 (NCERT)  
-5. Class 12 (NCERT)  
-6. SSC CGL  
-7. UPSC  
+A **Telegram study bot** that uses **RAG** (retrieval from your uploaded materials) for:
+
+- **Learn** — Q&A grounded in your notes/PDFs  
+- **Test** — MCQ, MSQ, numerical, theory (Easy / Medium / Hard)  
+- **Progress** — streaks, stats, mistake review, session reports  
+- **Voice Learn** — optional spoken answers (Sarvam TTS)
+
+**Categories (7):** Placement (BTech CSE), JEE, NEET, Class 11 (NCERT), Class 12 (NCERT), SSC CGL, UPSC.
 
 Each category → **topic/chapter** → **Learn** / **Test** / **Practice mistakes**.
+
+Upload flow: send PDFs/txt/md via Telegram **Upload**, or drop files under `data/materials/<category>/` on the server and run `/reindex`.
+
+---
+
+## Status: done vs left
+
+| Done | Left (owner) |
+|------|----------------|
+| Bot features (Learn, Test, topics, progress, voice, upload) | Upload **real study PDFs** (biggest quality win) |
+| Azure VM deploy + systemd auto-start | Optional: **rotate** API keys if they were exposed in chat |
+| RAG (Chroma + sentence-transformers) + offline fallback | Optional: better LLM (OpenRouter key, higher Workers AI model) for Groq-quality answers |
+| Cloudflare Worker LLM proxy deployed | |
+| Azure → Worker → **Workers AI** path verified (`X-Relay: workers-ai`) | |
+| `LLM_PROXY_URL` set on VM; proxy code on branch `cursor/cloudflare-llm-proxy` | |
+
+---
+
+## Current flow (Learn / Test on Azure today)
+
+When a student asks a Learn question or starts a Test:
+
+1. Student chats with [@mock_practice_bot](https://t.me/mock_practice_bot) on Telegram.  
+2. **Azure VM** (`104.208.98.207`) runs `bot.py` via systemd (`mock-practice-bot`).  
+3. **RAG** retrieves relevant chunks from uploaded materials (Chroma + sentence-transformers).  
+4. For generation, the bot calls **`LLM_PROXY_URL`** → Cloudflare Worker:  
+   `https://mock-practice-groq-proxy.ayushanand27-mp.workers.dev/openai/v1`  
+5. The Worker tries providers in order: **Workers AI** (primary) → Groq → Gemini.  
+6. **Today on Azure:** requests succeed via **Workers AI** (`@cf/meta/llama-3.1-8b-instruct-fp8`).  
+   Response header: `X-Relay: workers-ai`.  
+7. If all LLM providers fail, the bot falls back to **offline RAG** (answers built from retrieved note chunks).
+
+```
+Telegram  →  Azure VM (bot.py)  →  RAG (Chroma)
+                      ↓
+              LLM_PROXY_URL (Cloudflare Worker)
+                      ↓
+         Workers AI ✓  |  Groq ✗ (403)  |  Gemini ✗ (geo/quota)
+```
+
+---
+
+## Why Groq looked "blocked"
+
+This is **API provider geo/datacenter policy**, not a bug in the bot.
+
+| Observation | Detail |
+|-------------|--------|
+| Groq from laptop/home IP | Works |
+| Groq from **Azure East Asia** VM IP | **HTTP 403 Forbidden** |
+| Worker colo when Azure calls in | Often **HKG** (Hong Kong) — Groq still **403** |
+| `locationHint: wnam` on Durable Object | Did **not** fix it; Groq still 403 when traffic enters via Azure/HKG |
+| Gemini from Azure | Fails (location / quota); Worker Gemini secret often **429** quota |
+
+**Bottom line:** Direct Groq/Gemini from the Azure datacenter IP is blocked. The Worker routes around that by using **Cloudflare Workers AI** as the primary relay, which accepts requests from Azure.
 
 ---
 
@@ -57,16 +113,18 @@ After adding files on the **server**, run `/reindex` in Telegram.
 
 ### 2. Keep secrets safe
 - Never commit `.env`  
-- You pasted API keys in chat before — **rotate** Telegram bot token (BotFather `/revoke`), Groq, Sarvam, Gemini when you can  
-- Put new keys only in `.env` on the VM (or ask the agent to update via SSH)
+- If API keys were pasted in chat — **rotate** Telegram bot token (BotFather `/revoke`), Groq, Sarvam, Gemini when you can  
+- Put new keys only in `.env` on the VM (or update via SSH)
 
-### 3. Fix Groq / Gemini on Azure (optional but recommended)
-See section **[Groq & Gemini not working on Azure](#groq--gemini-not-working-on-azure)** below.  
-Until fixed, the bot still works using **offline RAG** (answers/questions from your notes).
+### 3. Optional: stronger LLM
+Current path uses Workers AI `llama-3.1-8b` (free, works from Azure). For richer answers:
+- Add an **OpenRouter** (or similar cloud-friendly) key and wire it in, or  
+- Upgrade the Workers AI model in `deploy/cloudflare-groq-proxy/` and redeploy the Worker.
 
 ### 4. Day-to-day ops
 - Bot auto-starts on the VM (`systemd`)  
-- After code changes on GitHub: `bash scripts/deploy-azure.sh`  
+- Redeploy bot after code changes: `bash scripts/deploy-azure.sh`  
+- Redeploy LLM proxy: `cd deploy/cloudflare-groq-proxy && npx wrangler deploy`  
 - Logs: `sudo journalctl -u mock-practice-bot -f`  
 - Stop local `python bot.py` on your laptop so it doesn’t conflict with Azure  
 
@@ -105,6 +163,8 @@ pip install -r requirements.txt
 python bot.py
 ```
 
+On a laptop, Groq often works directly (no proxy needed). On Azure, set `LLM_PROXY_URL` (see below).
+
 ---
 
 ## Env vars
@@ -112,72 +172,31 @@ python bot.py
 | Var | Role |
 |-----|------|
 | `BOT_TOKEN` | Telegram (BotFather) |
-| `GROQ_API_KEY` | Fast LLM (works on laptop; often blocked on cloud IPs) |
-| `GEMINI_API_KEY` | Google AI Studio key (often blocked from datacenter IPs) |
+| `GROQ_API_KEY` | Groq LLM (works on laptop; blocked from Azure datacenter IPs) |
+| `GEMINI_API_KEY` | Google AI Studio key (often blocked / quota-limited from cloud) |
 | `SARVAM_API_KEY` | Voice TTS/STT (+ optional chat if enabled) |
 | `GROQ_MODEL` | Optional, default `llama-3.3-70b-versatile` |
 | `GEMINI_MODEL` | Optional, default `gemini-2.0-flash` |
-| `LLM_PROXY_URL` | Optional OpenAI-compatible proxy base URL (see below) |
+| `LLM_PROXY_URL` | OpenAI-compatible proxy base URL (required on Azure VM) |
 
-Never commit `.env`.
+**Azure VM (production):**
+
+```env
+LLM_PROXY_URL=https://mock-practice-groq-proxy.ayushanand27-mp.workers.dev/openai/v1
+```
+
+Never commit `.env` or API keys.
 
 ---
 
-## Groq & Gemini not working on Azure
+## LLM proxy (Cloudflare Worker)
 
-### What’s wrong?
+Code: `deploy/cloudflare-groq-proxy/`  
+Deploy: `cd deploy/cloudflare-groq-proxy && npx wrangler deploy`  
+Secrets (set via `wrangler secret put`, not in git): `GROQ_API_KEY`, `GEMINI_API_KEY`, optional `PROXY_TOKEN`.
 
-Your keys work on your **laptop**, but the **Azure VM public IP** (`East Asia` datacenter) is treated as a cloud/server IP:
-
-| Provider | Error from Azure | Meaning |
-|----------|------------------|---------|
-| **Groq** | `403 Forbidden` | Free / abuse protection — blocks many VPS/cloud IPs |
-| **Gemini** | `User location is not supported` / quota | Datacenter / region IP not allowed for API use |
-
-This is a **provider policy**, not a bug in our bot code.
-
-### What the bot does today
-
-1. Try Groq → Gemini  
-2. If both fail → **offline RAG mode** (retrieve your notes and build answers/questions locally)  
-
-So Learn/Test still work after you upload PDFs — just less “smart” than a live LLM.
-
-### How to resolve (pick one)
-
-#### Option A — Cloudflare Worker proxy for Groq (best free fix)
-Route Groq calls through Cloudflare’s edge so the request does not come from the Azure IP.
-
-1. Create a free [Cloudflare Workers](https://workers.cloudflare.com) account  
-2. Deploy a tiny Groq proxy (example projects: search `groq-cf-proxy`)  
-3. Set on the Azure VM `.env`:
-   ```env
-   LLM_PROXY_URL=https://YOUR-WORKER.workers.dev/openai/v1
-   GROQ_API_KEY=your_groq_key
-   ```
-4. Redeploy / restart: `sudo systemctl restart mock-practice-bot`  
-
-*(Proxy support can be wired in code if not already — ask the agent to add `base_url` from `LLM_PROXY_URL`.)*
-
-#### Option B — Use an LLM that allows cloud IPs
-Paid or cloud-friendly APIs often work from Azure, e.g.:
-
-- DeepSeek / OpenRouter / Together / Azure OpenAI  
-
-Add the key and ask to wire that provider.
-
-#### Option C — Recreate VM in another region (may still fail)
-Student subscription only allows certain regions (yours: Australia East, East Asia, Korea Central, Southeast Asia, Malaysia West).  
-Moving region **might** help Gemini sometimes, but **cloud IPs are often still blocked**. Not guaranteed.
-
-#### Option D — Keep offline RAG (simplest)
-Upload strong PDFs and stay on note-based answers until you add a proxy or paid API.  
-For an exam bot, **good materials > fancy model**.
-
-### Recommended path for you
-1. **Upload PDFs now** (biggest quality jump)  
-2. Then set up **Cloudflare Groq proxy** (free) **or** OpenRouter/DeepSeek  
-3. Rotate exposed keys  
+Provider order inside the Worker: **Workers AI** → Groq → Gemini.  
+Azure production traffic uses Workers AI today.
 
 ---
 
@@ -189,8 +208,9 @@ config.py              # Categories, topics, paths
 keyboards.py           # UI buttons
 handlers/study.py      # Learn / Test / topics / mistakes / voice / upload
 rag/                   # Chunk → embed → Chroma → retrieve
-services/groq_service.py   # Multi-provider LLM + offline fallback
+services/groq_service.py   # LLM client (proxy URL) + offline fallback
 services/progress_store.py # Streak, stats, wrong answers
+deploy/cloudflare-groq-proxy/  # Cloudflare Worker (LLM relay)
 deploy/ + scripts/     # systemd unit + Azure redeploy
 ```
 
@@ -217,6 +237,8 @@ Service:
 sudo systemctl status mock-practice-bot
 sudo journalctl -u mock-practice-bot -f
 ```
+
+After changing `.env` on the VM: `sudo systemctl restart mock-practice-bot`
 
 ---
 
