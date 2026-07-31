@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import time
 from pathlib import Path
 
 from telegram import Update
@@ -18,7 +19,9 @@ from keyboards import (
     difficulty_keyboard,
     learn_controls_keyboard,
     main_reply_keyboard,
+    mock_controls_keyboard,
     mode_keyboard,
+    revise_controls_keyboard,
     test_controls_keyboard,
     test_types_keyboard,
     topics_keyboard,
@@ -26,11 +29,13 @@ from keyboards import (
 )
 from rag import pipeline
 from rag import store as rag_store
-from services import groq_service, progress_store, rate_limit, sarvam_service, study_state
+from services import groq_service, guardrails, language, progress_store, rate_limit, sarvam_service, study_state
 
 logger = logging.getLogger(__name__)
 
 TG_MAX = 3900
+MOCK_DEFAULT_QUESTIONS = 15
+MOCK_SECONDS_PER_Q = 90
 
 
 async def _answer(query, text: str | None = None, **kwargs) -> None:
@@ -94,6 +99,17 @@ def _empty_materials_note(category: str) -> str:
         "• Or ask the owner to add files under data/materials/ and run /reindex\n"
         "You can still browse topics — Learn/Test work once materials exist."
     )
+
+
+def _mock_timer_line(sess: study_state.StudySession) -> str:
+    if sess.mode != "mock" or not sess.mock_target:
+        return ""
+    n = sess.score_total + (1 if sess.awaiting_answer else 0)
+    elapsed = int(time.time() - sess.mock_started_at) if sess.mock_started_at else 0
+    budget = sess.mock_target * MOCK_SECONDS_PER_Q
+    left = max(0, budget - elapsed)
+    mins, secs = divmod(left, 60)
+    return f"⏱ Mock Q{n}/{sess.mock_target} · ~{mins}m {secs:02d}s left\n"
 
 
 def _focus_hint(sess: study_state.StudySession) -> str:
@@ -167,6 +183,32 @@ async def study_home(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 async def study_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await study_home(update, context)
+
+
+async def mock_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Start timed mock exam for current category or prompt to pick one."""
+    uid = _uid(update)
+    sess = study_state.get(uid)
+    if not sess.category:
+        await _reply(
+            update,
+            "Pick a category first: /study → category → ⏱ Mock exam",
+            reply_markup=categories_keyboard(),
+        )
+        return
+    cat = sess.category
+    study_state.begin_test(uid, cat, "mcq", difficulty="medium", mode="mock")
+    s = study_state.get(uid)
+    s.mock_target = MOCK_DEFAULT_QUESTIONS
+    s.mock_started_at = time.time()
+    await _reply(
+        update,
+        f"⏱ *Mock exam* — {category_label(cat)}\n"
+        f"{MOCK_DEFAULT_QUESTIONS} MCQ · ~{MOCK_DEFAULT_QUESTIONS * MOCK_SECONDS_PER_Q // 60} min.\n"
+        "Starting Q1…",
+        parse_mode="Markdown",
+    )
+    await _send_test_question(update, context)
 
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
@@ -284,6 +326,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if data.startswith("mode:"):
         # mode:learn:placement | mode:test:placement | mode:mistakes:placement
+        # mode:mock:placement | mode:revise:placement
         parts = data.split(":")
         if len(parts) != 3:
             await _answer(query)
@@ -300,6 +343,24 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await _answer(query)
         if mode == "mistakes":
             await _start_mistakes_practice(update, context, cat)
+            return True
+        if mode == "mock":
+            study_state.begin_test(uid, cat, "mcq", difficulty="medium", mode="mock")
+            s = study_state.get(uid)
+            s.mock_target = MOCK_DEFAULT_QUESTIONS
+            s.mock_started_at = time.time()
+            await query.edit_message_text(
+                f"⏱ *Mock exam* — {category_label(cat)}\n"
+                f"{_focus_hint(s)}\n"
+                f"{_empty_materials_note(cat)}\n\n"
+                f"{MOCK_DEFAULT_QUESTIONS} MCQ questions · ~{MOCK_DEFAULT_QUESTIONS * MOCK_SECONDS_PER_Q // 60} min budget.\n"
+                "Starting Q1…",
+                parse_mode="Markdown",
+            )
+            await _send_test_question(update, context)
+            return True
+        if mode == "revise":
+            await _start_revise(update, context, cat)
             return True
         sess.mode = mode
         if mode == "learn":
@@ -390,15 +451,34 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         sess = study_state.get(uid)
         report = format_session_report(sess, user_id=uid)
         stats = progress_store.format_stats(uid)
+        was_mock = sess.mode == "mock"
         study_state.reset_mode(uid)
         study_state.reset_score(uid)
         await _answer(query)
-        await query.edit_message_text(_clip(f"{report}\n\n{stats}"))
+        title = "Mock exam complete" if was_mock else "Session ended"
+        await query.edit_message_text(_clip(f"{title}\n\n{report}\n\n{stats}"))
         await _reply(
             update,
             "Copy the report above to share on LinkedIn or WhatsApp.",
             reply_markup=categories_keyboard(),
         )
+        return True
+
+    if data == "revise:flip":
+        await _answer(query)
+        await _revise_flip(update, context)
+        return True
+
+    if data == "revise:next":
+        await _answer(query)
+        await _revise_next(update, context)
+        return True
+
+    if data == "revise:mistakes":
+        await _answer(query)
+        sess = study_state.get(uid)
+        if sess.category:
+            await _start_revise(update, context, sess.category, from_mistakes=True)
         return True
 
     if data.startswith("upload_cat:"):
@@ -632,10 +712,14 @@ async def _send_test_question(update: Update, context: ContextTypes.DEFAULT_TYPE
         plain = f"{warn}\n\n{plain}"
     if groq_service.chat_used_offline():
         plain = _maybe_offline_notice(sess, plain)
+    timer = _mock_timer_line(sess)
+    if timer:
+        plain = timer + plain
+    kb = mock_controls_keyboard() if sess.mode == "mock" else test_controls_keyboard()
     await _reply(
         update,
         plain,
-        reply_markup=test_controls_keyboard(),
+        reply_markup=kb,
     )
 
 
@@ -653,15 +737,15 @@ async def handle_study_text(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         )
         return True
 
-    if sess.mode in {"test", "mistakes"} and sess.awaiting_answer and sess.current_question:
+    if sess.mode in {"test", "mistakes", "mock"} and sess.awaiting_answer and sess.current_question:
         await _grade_and_reply(update, context, text)
         return True
 
-    if sess.mode in {"test", "mistakes"} and not sess.awaiting_answer:
+    if sess.mode in {"test", "mistakes", "mock"} and not sess.awaiting_answer:
         await _reply(
             update,
             "Tap Next question for another, or End + report.",
-            reply_markup=test_controls_keyboard(),
+            reply_markup=mock_controls_keyboard() if sess.mode == "mock" else test_controls_keyboard(),
         )
         return True
 
@@ -677,6 +761,12 @@ async def _learn_answer(
 ) -> None:
     uid = _uid(update)
     sess = study_state.get(uid)
+
+    guard = guardrails.check_input(text)
+    if guard.action != guardrails.GuardAction.ALLOW:
+        await _reply(update, guard.message, reply_markup=learn_controls_keyboard())
+        return
+
     if not rate_limit.allow(f"learn:{uid}", max_hits=15, window_sec=60):
         wait = rate_limit.retry_after(f"learn:{uid}", window_sec=60)
         await _reply(update, f"Too many questions — wait ~{wait}s.")
@@ -686,17 +776,20 @@ async def _learn_answer(
     question = text
     if sess.topic:
         question = f"{topic_label(sess.category or '', sess.topic)}: {text}"
+    lang = language.detect_language(text)
     try:
         answer = await asyncio.to_thread(
-            pipeline.answer_question,
+            _learn_with_lang,
             sess.category or "placement",
             question,
+            lang,
         )
     except Exception as exc:
         logger.exception("learn answer failed: %s", exc)
         await _reply(update, f"Error: {exc}")
         return
     progress_store.record_ai_call(uid)
+    answer = guardrails.sanitize_output(answer)
     answer = _maybe_offline_notice(sess, answer)
     warn = progress_store.ai_usage_warning(uid)
     if warn:
@@ -792,12 +885,149 @@ async def _grade_and_reply(
     stats = progress_store.get_stats(uid)
     goal = int(stats.get("daily_goal") or 10)
     daily = int(stats.get("daily_answered") or 0)
+    kb = mock_controls_keyboard() if sess.mode == "mock" else test_controls_keyboard()
     await _reply(
         update,
         f"{result}\n\n"
         f"Session: {sess.score_correct}/{sess.score_total} · "
         f"Today: {daily}/{goal} · Streak: {stats.get('streak', 0)}🔥",
-        reply_markup=test_controls_keyboard(),
+        reply_markup=kb,
+    )
+
+    # Auto-end mock when target reached
+    if sess.mode == "mock" and sess.mock_target and sess.score_total >= sess.mock_target:
+        report = format_session_report(sess, user_id=uid)
+        study_state.reset_mode(uid)
+        study_state.reset_score(uid)
+        await _reply(
+            update,
+            f"⏱ Mock exam finished!\n\n{report}",
+            reply_markup=categories_keyboard(),
+        )
+
+
+def _learn_with_lang(category: str, question: str, lang: str) -> str:
+    """RAG answer with optional Sarvam for Indic languages."""
+    from config import category_label as cat_label
+
+    hits = pipeline.search(category, question)
+    if not hits:
+        return (
+            "I couldn't find relevant material for this category yet.\n"
+            "• Tap Upload → pick category → send a PDF\n"
+            "• Or ask the owner to add files under data/materials/ and run /reindex"
+        )
+    context_blocks = []
+    sources: list[str] = []
+    for h in hits:
+        src = h["source"]
+        if src not in sources:
+            sources.append(src)
+        context_blocks.append(f"[{src}]\n{h['text']}")
+    context = "\n\n---\n\n".join(context_blocks)
+    answer = groq_service.study_chat_answer(
+        cat_label(category), question, context, lang
+    )
+    cited = ", ".join(sources[:4])
+    return f"{answer}\n\n📄 Source: {cited}"
+
+
+async def _start_revise(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    cat: str,
+    *,
+    from_mistakes: bool = False,
+) -> None:
+    uid = _uid(update)
+    sess = study_state.get(uid)
+    sess.mode = "revise"
+    sess.category = cat
+    cards: list[dict] = []
+
+    if from_mistakes:
+        wrongs = progress_store.list_wrong(uid, limit=10)
+        for w in reversed(wrongs):
+            if w.get("category") == cat:
+                cards.append(
+                    {
+                        "front": f"❓ {w.get('prompt', '')[:280]}",
+                        "back": f"💡 {w.get('explanation') or 'Review your notes'}",
+                        "source": "mistake",
+                    }
+                )
+
+    if not cards:
+        hint = topic_label(cat, sess.topic) if sess.topic else "key concepts"
+        try:
+            hits = await asyncio.to_thread(pipeline.search, cat, hint, 6)
+            for h in hits[:6]:
+                text = h["text"].strip()
+                sentence = text[:200] + ("…" if len(text) > 200 else "")
+                cards.append(
+                    {
+                        "front": f"🃏 What do you know about:\n{sentence}",
+                        "back": text[:500],
+                        "source": h["source"],
+                    }
+                )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("revise RAG failed: %s", exc)
+
+    if not cards:
+        await _reply(
+            update,
+            "No flashcards yet — upload materials or take a Test first.",
+            reply_markup=mode_keyboard(cat),
+        )
+        sess.mode = None
+        return
+
+    sess.revise_cards = cards
+    sess.revise_index = 0
+    card = cards[0]
+    src = card.get("source", "")
+    src_line = f"\n📄 {src}" if src and src != "mistake" else ""
+    await _reply(
+        update,
+        f"🃏 Quick revise — {category_label(cat)} (1/{len(cards)})\n\n"
+        f"{card['front']}{src_line}\n\nTap *Show answer* when ready.",
+        parse_mode="Markdown",
+        reply_markup=revise_controls_keyboard(),
+    )
+
+
+async def _revise_flip(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    sess = study_state.get(_uid(update))
+    if not sess.revise_cards or sess.mode != "revise":
+        await _reply(update, "Start revise from Study → Quick revise.")
+        return
+    card = sess.revise_cards[sess.revise_index]
+    src = card.get("source", "")
+    src_line = f"\n📄 Source: {src}" if src and src != "mistake" else ""
+    await _reply(
+        update,
+        f"🃏 Card {sess.revise_index + 1}/{len(sess.revise_cards)}\n\n"
+        f"{card['back']}{src_line}",
+        reply_markup=revise_controls_keyboard(),
+    )
+
+
+async def _revise_next(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    sess = study_state.get(_uid(update))
+    if not sess.revise_cards or sess.mode != "revise":
+        await _reply(update, "Start revise from Study → Quick revise.")
+        return
+    sess.revise_index = (sess.revise_index + 1) % len(sess.revise_cards)
+    card = sess.revise_cards[sess.revise_index]
+    src = card.get("source", "")
+    src_line = f"\n📄 {src}" if src and src != "mistake" else ""
+    await _reply(
+        update,
+        f"🃏 Card {sess.revise_index + 1}/{len(sess.revise_cards)}\n\n"
+        f"{card['front']}{src_line}\n\nTap *Show answer* when ready.",
+        parse_mode="Markdown",
+        reply_markup=revise_controls_keyboard(),
     )
 
 
@@ -817,6 +1047,12 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if not update.message or not update.message.document:
         return
     uid = _uid(update)
+    if not rate_limit.allow(f"upload:{uid}", max_hits=5, window_sec=3600):
+        wait = rate_limit.retry_after(f"upload:{uid}", window_sec=3600)
+        await update.message.reply_text(
+            f"Upload limit reached — try again in ~{wait // 60} min."
+        )
+        return
     sess = study_state.get(uid)
     doc = update.message.document
     name = doc.file_name or "upload.bin"

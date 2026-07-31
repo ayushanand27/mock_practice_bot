@@ -6,6 +6,7 @@ from config import CATEGORIES, CATEGORY_TOPICS, TEST_TYPES
 
 MAIN_MENU_LABELS = (
     "📚 Study",
+    "💬 Ask anything",
     "Notes",
     "Reminders",
     "Help",
@@ -15,13 +16,24 @@ MAIN_MENU_LABELS = (
 def main_reply_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         [
-            ["📚 Study", "Upload"],
-            ["📊 Progress", "📝 Review"],
-            ["Notes", "Reminders"],
-            ["Help"],
+            ["📚 Study", "💬 Ask anything"],
+            ["Upload", "📊 Progress"],
+            ["📝 Review", "Notes"],
+            ["Reminders", "Help"],
         ],
         resize_keyboard=True,
         one_time_keyboard=False,
+    )
+
+
+def chat_controls_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("📚 Study menu", callback_data="study:home"),
+                InlineKeyboardButton("End chat", callback_data="chat:exit"),
+            ],
+        ]
     )
 
 
@@ -59,9 +71,14 @@ def mode_keyboard(category_id: str) -> InlineKeyboardMarkup:
                 InlineKeyboardButton("📝 Test", callback_data=f"mode:test:{category_id}"),
             ],
             [
+                InlineKeyboardButton("⏱ Mock exam", callback_data=f"mode:mock:{category_id}"),
+                InlineKeyboardButton("🃏 Quick revise", callback_data=f"mode:revise:{category_id}"),
+            ],
+            [
                 InlineKeyboardButton(
                     "🎯 Practice mistakes", callback_data=f"mode:mistakes:{category_id}"
                 ),
+                InlineKeyboardButton("💬 Ask anything", callback_data="chat:start"),
             ],
             [
                 InlineKeyboardButton("📊 Progress", callback_data="study:stats"),
@@ -165,6 +182,33 @@ def interview_controls_keyboard() -> InlineKeyboardMarkup:
 def cancel_reminder_keyboard(job_name: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [[InlineKeyboardButton("Cancel this reminder", callback_data=f"remind_cancel:{job_name}")]]
+    )
+
+
+def mock_controls_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("Next question", callback_data="test:next"),
+                InlineKeyboardButton("End mock", callback_data="test:end"),
+            ],
+            [InlineKeyboardButton("← Categories", callback_data="study:home")],
+        ]
+    )
+
+
+def revise_controls_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("Show answer", callback_data="revise:flip"),
+                InlineKeyboardButton("Next card", callback_data="revise:next"),
+            ],
+            [
+                InlineKeyboardButton("🎯 From mistakes", callback_data="revise:mistakes"),
+                InlineKeyboardButton("← Back", callback_data="study:retopic"),
+            ],
+        ]
     )
 
 

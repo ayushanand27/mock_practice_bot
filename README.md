@@ -165,15 +165,20 @@ Remind them: Upload their own notes → Learn / Test.
 
 | Feature | How |
 |---------|-----|
-| Learn (RAG) | Category → topic → ask a question |
+| Free chat | `/chat` or **💬 Ask anything** — RAG when category set |
+| Learn (RAG) | Category → topic → ask a question (📄 source PDF cited) |
 | Test | MCQ / MSQ / Numerical / Theory + Easy/Medium/Hard |
+| Mock exam | `/mock` or **⏱ Mock exam** — 15 timed MCQs + report |
+| Quick revise | **🃏 Quick revise** — flashcards from notes or mistakes |
 | Topics / chapters | After category, pick Physics / DSA / Polity / … |
 | Progress / streak | `/stats` or **Progress** |
 | Review mistakes | `/review` or **Review** |
 | Practice mistakes | Category → **Practice mistakes** |
 | Session report | End test → **End + report** |
 | Voice Learn | Short answers may auto-speak; or **Hear answer** (Sarvam) |
-| Upload | PDF/txt/md → auto reindex |
+| Hindi/Hinglish | Auto-detected — Sarvam replies when non-English |
+| Guardrails | Blocks NSFW/abuse/illegal; soft-refuses spam |
+| Upload | PDF/txt/md → auto reindex (5/hour limit) |
 | Notes / Reminders / Interview | Secondary menu / commands |
 
 ---

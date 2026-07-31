@@ -1,7 +1,7 @@
 """
 RAG Study Telegram bot — Learn & Test from local materials.
 
-Commands: /start /study /help /ping /reindex /note /notes /clearnotes
+Commands: /start /study /chat /mock /help /ping /reindex /note /notes /clearnotes
           /remind /reminders /interview /end
 """
 
@@ -25,7 +25,7 @@ from telegram.ext import (
     filters,
 )
 
-from handlers import interview, notes, reminders, study
+from handlers import chat, interview, notes, reminders, study
 from handlers.common import help_command, ping, review_command, send_main_menu, start, stats_command
 from services import interview_state as state
 
@@ -107,6 +107,8 @@ async def post_init(app: Application) -> None:
             [
                 BotCommand("start", "Open study categories"),
                 BotCommand("study", "Learn or take a test"),
+                BotCommand("chat", "Free study chat"),
+                BotCommand("mock", "Timed mock exam"),
                 BotCommand("stats", "Streak and progress"),
                 BotCommand("review", "Review wrong answers"),
                 BotCommand("help", "How to use the bot"),
@@ -144,6 +146,9 @@ async def menu_text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     if text in {"📊 Progress", "Progress", "/stats"}:
         await study.show_stats(update, context)
         return
+    if text in {"💬 Ask anything", "Ask anything", "/chat"}:
+        await chat.chat_command(update, context)
+        return
     if text in {"📝 Review", "Review", "/review"}:
         await study.show_review(update, context)
         return
@@ -164,6 +169,9 @@ async def menu_text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
 
     if await study.handle_study_text(update, context, text):
+        return
+
+    if await chat.handle_chat_text(update, context, text):
         return
 
     if state.is_active(user_id):
@@ -197,6 +205,9 @@ async def callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     if await study.handle_callback(update, context):
+        return
+
+    if await chat.handle_chat_callback(update, context):
         return
 
     if data.startswith("remind_cancel:"):
@@ -261,6 +272,8 @@ def main() -> None:
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("ping", ping))
     app.add_handler(CommandHandler("study", study.study_command))
+    app.add_handler(CommandHandler("chat", chat.chat_command))
+    app.add_handler(CommandHandler("mock", study.mock_command))
     app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(CommandHandler("review", review_command))
     app.add_handler(CommandHandler("reindex", study.reindex_command))

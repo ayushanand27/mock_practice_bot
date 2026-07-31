@@ -10,7 +10,7 @@ from typing import Any
 class StudySession:
     category: str | None = None
     topic: str | None = None  # topic slug within category
-    mode: str | None = None  # learn | test | mistakes | None
+    mode: str | None = None  # learn | test | mistakes | chat | mock | revise | None
     test_type: str | None = None  # mcq|msq|numerical|theory
     difficulty: str = "medium"  # easy | medium | hard
     awaiting_answer: bool = False
@@ -24,6 +24,12 @@ class StudySession:
     last_learn_answer: str = ""
     voice_learn: bool = True
     offline_notice_shown: bool = False
+    # Timed mock exam
+    mock_target: int = 0
+    mock_started_at: float = 0.0
+    # Flashcard / revise
+    revise_cards: list[dict] = field(default_factory=list)
+    revise_index: int = 0
 
 
 _SESSIONS: dict[int, StudySession] = {}

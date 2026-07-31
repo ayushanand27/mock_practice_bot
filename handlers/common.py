@@ -12,6 +12,8 @@ HELP_TEXT = """*RAG Study Bot*
 
 /start – pick a study category
 /study – Learn or Test menu
+/chat – free study chat (RAG when category set)
+/mock – timed mock exam (15 MCQ)
 /stats – streak, daily goal, accuracy
 /review – revisit wrong answers
 /reindex – rebuild vector index
@@ -19,8 +21,13 @@ HELP_TEXT = """*RAG Study Bot*
 
 *Study flow*
 1. Category: Placement · JEE · NEET · Class 11 · Class 12 · SSC CGL · UPSC
-2. *Learn* – ask concepts (answers grounded in your docs + sources)
-3. *Test* – MCQ / MSQ / Numerical / Theory → pick Easy/Medium/Hard → score
+2. *Learn* – ask concepts (answers grounded in your docs + 📄 source PDFs)
+3. *Test* – MCQ / MSQ / Numerical / Theory → Easy/Medium/Hard
+4. *Mock exam* – 15 timed MCQs with session report
+5. *Quick revise* – flashcards from materials or mistakes
+
+*Guardrails*
+Sexual/abusive/illegal requests are refused. Off-topic spam gets a short redirect.
 
 *Materials*
 • Drop PDFs in data/materials/{{category}}/ then /reindex
@@ -68,7 +75,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "1. Pick a category below\n"
         "2. Pick a topic (or All topics)\n"
         "3. Tap *Learn* (ask anything) or *Test* (MCQ / MSQ / Numerical / Theory)\n"
-        "4. End test → shareable session report\n\n"
+        "4. Try *Mock exam* or *Quick revise* · 💬 *Ask anything* for free chat\n"
+        "5. End test → shareable session report\n\n"
         "📤 *Materials*\n"
         "Upload a PDF for best results (Upload → category → send file).\n"
         "No PDF yet? The bot still works on whatever notes are already indexed.\n\n"
@@ -84,7 +92,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             parse_mode="Markdown",
         )
         await update.message.reply_text(
-            "Shortcuts: 📚 Study · Upload · 📊 Progress · 📝 Review",
+            "Shortcuts: 📚 Study · 💬 Ask anything · Upload · 📊 Progress · 📝 Review",
             reply_markup=main_reply_keyboard(),
         )
 

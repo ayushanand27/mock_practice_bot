@@ -249,6 +249,60 @@ def chat_used_offline() -> bool:
     return _last_chat_offline
 
 
+def chat_with_language(
+    system: str,
+    user: str,
+    lang: str = "en",
+    *,
+    max_tokens: int = 500,
+    temperature: float = 0.4,
+) -> str:
+    """Route to Sarvam for Hindi/Hinglish when key is set; else default chain."""
+    from services.language import reply_language_hint
+
+    system = f"{system}\n\n{reply_language_hint(lang)}"
+    if lang in {"hi", "hinglish"} and os.getenv("SARVAM_API_KEY", "").strip():
+        try:
+            text = _sarvam_chat(system, user, max_tokens, temperature)
+            if text:
+                global _last_chat_offline
+                _last_chat_offline = False
+                logger.info("LLM via sarvam (lang=%s)", lang)
+                return text
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Sarvam lang chat failed, falling back: %s", exc)
+    return chat(system, user, max_tokens=max_tokens, temperature=temperature)
+
+
+def study_chat_answer(
+    category_label: str,
+    question: str,
+    context: str,
+    lang: str = "en",
+) -> str:
+    system = (
+        f"You are a concise exam tutor for {category_label}. "
+        "Answer ONLY from the provided materials. "
+        "Short paragraphs or bullets. Under 350 words. No fluff."
+    )
+    user = f"Study materials:\n{context}\n\nStudent question:\n{question}"
+    return chat_with_language(system, user, lang, max_tokens=550, temperature=0.3)
+
+
+def general_study_chat(
+    question: str,
+    category_hint: str | None,
+    lang: str = "en",
+) -> str:
+    focus = category_hint or "general exams (JEE, NEET, placement, SSC, UPSC)"
+    system = (
+        f"You are a helpful study coach for {focus}. "
+        "Give clear, accurate, concise exam-prep advice. "
+        "Under 300 words. No sexual, violent, or off-topic content."
+    )
+    return chat_with_language(system, question, lang, max_tokens=450, temperature=0.5)
+
+
 def _chat(system: str, user: str, max_tokens: int = 600) -> str:
     return chat(system, user, max_tokens=max_tokens)
 

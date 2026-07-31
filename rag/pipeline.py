@@ -134,7 +134,7 @@ def answer_question(category: str, question: str) -> str:
     context = "\n\n---\n\n".join(context_blocks)
     answer = groq_study_answer(category, question, context)
     cited = ", ".join(sources[:4])
-    return f"{answer}\n\nSources: {cited}"
+    return f"{answer}\n\n📄 Source: {cited}"
 
 
 def groq_study_answer(category: str, question: str, context: str) -> str:
