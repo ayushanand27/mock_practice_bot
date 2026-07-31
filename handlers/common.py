@@ -16,7 +16,7 @@ HELP_TEXT = """*RAG Study Bot*
 /help · /ping
 
 *Study flow*
-1. Category: Placement · JEE · NEET · Class 11 · Class 12 · SSC CGL
+1. Category: Placement · JEE · NEET · Class 11 · Class 12 · SSC CGL · UPSC
 2. *Learn* – ask e.g. "What is ACID?" (answers from your docs)
 3. *Test* – MCQ, MSQ, Numerical, or Theory → answer → score
 

@@ -83,6 +83,7 @@ On startup the bot indexes `data/materials/{category}/` into a local Chroma stor
    - `data/materials/ncert_11/` — e.g. Class 11 NCERT chapter PDFs from [ncert.nic.in](https://ncert.nic.in)
    - `data/materials/ncert_12/` — e.g. Class 12 NCERT chapter PDFs
    - `data/materials/ssc_cgl/`
+   - `data/materials/upsc/` — e.g. GS notes / polity / history / economy PDFs
 2. Supported: `.pdf`, `.txt`, `.md`
 3. In Telegram run `/reindex` (or restart if the index was empty)
 4. Prefer many focused chapter PDFs over one giant scan if extraction quality matters

@@ -1,0 +1,119 @@
+UPSC CSE Prelims — GS sample revision notes (seed)
+Add standard books / coaching notes under data/materials/upsc/ then /reindex.
+(Laxmikanth for Polity, Spectrum for Modern History, NCERT + Ramesh Singh flavour for Economy, etc.)
+
+================================================================================
+INDIAN POLITY (Prelims essentials)
+================================================================================
+
+Constitution basics
+- Adopted 26 Nov 1949; came into force 26 Jan 1950 (Republic Day).
+- Preamble: Sovereign, Socialist, Secular, Democratic, Republic; Justice, Liberty, Equality, Fraternity.
+- "Socialist" and "Secular" added by 42nd Amendment (1976); "Unity of the Nation" → "Unity and Integrity" also 42nd.
+
+Fundamental Rights (Part III)
+- Arts. 12–35. Enforceable against the State (Art. 12).
+- Right to Equality (14–18), Freedom (19–22), against Exploitation (23–24), Religion (25–28), Cultural & Educational (29–30), Constitutional Remedies (32 — "heart and soul", per Ambedkar).
+- Art. 19: six freedoms (speech, assembly, association, movement, residence, profession) — subject to reasonable restrictions.
+- Art. 21: life and personal liberty; expanded by judiciary (privacy, livelihood, clean environment, etc.).
+- Art. 32: writs — habeas corpus, mandamus, prohibition, certiorari, quo warranto. High Courts: Art. 226 (wider).
+
+DPSP & Fundamental Duties
+- DPSPs (Part IV, Arts. 36–51): non-justiciable guidelines; aim for welfare state. Inspired partly by Irish Constitution.
+- Fundamental Duties (Art. 51A): added by 42nd Amendment on Swaran Singh Committee recommendations; originally 10, 11th via 86th (education of child 6–14).
+
+Parliament & Executive
+- Lok Sabha: max 552 (practical strength lower after delimitation freeze nuances — revise current figures from latest sources). Rajya Sabha: permanent house; 1/3 retire every 2 years.
+- Money Bill: only LS; Speaker’s certificate final (Art. 110). RS can recommend within 14 days; LS may accept/reject.
+- President: executive head; elected by Electoral College (elected MPs + elected MLAs). Impeachment for violation of Constitution (Art. 61).
+- PM: head of Council of Ministers; collective responsibility to Lok Sabha (Art. 75).
+- Ordinance (Art. 123): when Parliament not in session; must be laid before Houses; ceases if not approved in 6 weeks of reassembly.
+
+Judiciary & federalism
+- Supreme Court: original, appellate, advisory jurisdiction. Judicial review of legislation.
+- Basic Structure doctrine (Kesavananda Bharati, 1973): Parliament cannot amend Constitution to destroy basic features.
+- Centre–State: Seventh Schedule — Union, State, Concurrent Lists. Residuary with Centre (Art. 248).
+- Emergency: National (352), State/President’s Rule (356), Financial (360).
+
+Local bodies & elections
+- 73rd / 74th Amendments: Panchayats / Municipalities; State Election Commission; Finance Commission for local bodies.
+- Election Commission of India (Art. 324): superintendence of elections to Parliament, State legislatures, President, VP.
+- Anti-defection (10th Schedule): disqualification for voluntary give-up of membership / voting against party whip (with exceptions).
+
+================================================================================
+MODERN INDIAN HISTORY (Prelims flavour)
+================================================================================
+
+Company to Crown
+- Battle of Plassey (1757), Buxar (1764) → dual system / Diwani of Bengal.
+- Regulating Act 1773, Pitt’s India Act 1784, Charter Acts; 1858 Government of India Act after 1857 Revolt — Crown rule, Secretary of State.
+
+Socio-religious reform
+- Brahmo Samaj (Raja Ram Mohan Roy), Arya Samaj (Dayanand), Aligarh Movement (Sir Syed), Theosophical Society, Satyashodhak (Phule), Narayana Guru — social reform linked to nationalism.
+
+National movement milestones
+- INC founded 1885 (A.O. Hume; first session W.C. Bonnerjee, Bombay).
+- Moderates vs Extremists; Surat Split 1907; Lucknow Pact 1916 (Congress–League).
+- Partition of Bengal 1905 → Swadeshi; annulled 1911.
+- Home Rule (Tilak, Annie Besant); Montagu–Chelmsford / GoI Act 1919; Rowlatt, Jallianwala Bagh 1919.
+- Non-Cooperation (1920–22), Civil Disobedience / Dandi March 1930, Round Table Conferences, Poona Pact 1932 (Ambedkar–Gandhi on depressed classes).
+- GoI Act 1935: provincial autonomy, federal scheme (Centre never fully implemented as designed).
+- Quit India 1942; INA trials; Cabinet Mission 1946; Mountbatten Plan; Independence 15 Aug 1947.
+
+Constitution-making
+- Constituent Assembly first met Dec 1946; Drafting Committee chaired by B.R. Ambedkar; Constitution adopted 26 Nov 1949.
+
+================================================================================
+INDIAN ECONOMY (Prelims basics)
+================================================================================
+
+National income concepts
+- GDP: value of final goods/services produced within domestic territory in a year.
+- GNP = GDP + net factor income from abroad.
+- NDP / NNP: subtract depreciation. Factor cost vs market price: taxes − subsidies.
+- Real vs nominal: real uses constant prices (inflation-adjusted).
+
+Inflation & money
+- CPI / WPI: price indices; RBI’s inflation targeting framework uses CPI (flexible inflation targeting with government).
+- Demand-pull vs cost-push inflation. Stagflation: slow growth + high inflation.
+- Repo / reverse repo / CRR / SLR: tools affecting liquidity and credit.
+
+Fiscal concepts
+- Budget: receipts (revenue + capital) and expenditure (revenue + capital).
+- Fiscal deficit: total expenditure − (revenue receipts + non-debt capital receipts).
+- Revenue deficit: revenue expenditure − revenue receipts. Primary deficit ≈ fiscal deficit − interest payments.
+- GST: destination-based indirect tax; CGST/SGST/IGST; GST Council.
+
+Planning & reforms
+- Planning Commission → NITI Aayog (2015): think tank, cooperative federalism (not a planning body allocating Plan funds like before).
+- 1991 reforms: LPG — liberalisation, privatisation, globalisation; balance-of-payments crisis context.
+- Priority sector lending, financial inclusion (Jan Dhan), DBT — revise scheme names/years from current affairs capsules.
+
+External sector
+- CAD: current account deficit. Forex reserves; BoP identity.
+- FDI vs FPI; WTO basics (MFN, national treatment) at definition level for prelims.
+
+================================================================================
+GEOGRAPHY & ENVIRONMENT (quick GS hooks)
+================================================================================
+
+Physical / India
+- Monsoon: seasonal reversal of winds; southwest monsoon main rainfall; El Niño association with weaker monsoon (probabilistic, not absolute).
+- Himalayas / Peninsular plateau / Indo-Gangetic plain; major drainage: Himalayan vs Peninsular rivers.
+- Soils: alluvial, black (regur), red, laterite — crop associations (e.g. black soil ↔ cotton).
+
+Environment & ecology
+- Biodiversity hotspots in India (Western Ghats, Himalayas, Indo-Burma, Sundaland — revise exact list).
+- Protected areas: National Parks, Wildlife Sanctuaries, Biosphere Reserves; Project Tiger.
+- Climate change: UNFCCC, Kyoto, Paris Agreement — NDCs; India’s renewable energy push (revise latest targets from current sources).
+- Pollution: Air Quality Index basics; CPCB / SPCBs roles at overview level.
+
+================================================================================
+SCIENCE & TECH / CURRENT AFFAIRS (prelims habit)
+================================================================================
+
+- Space: ISRO missions — revise latest successful launches and objectives from reliable monthly digests.
+- Biotech / health: vaccines, AMR, basic genetics one-liners from NCERT.
+- Defence / schemes / reports: prefer monthly CA compilations + PIB summaries over scattered news.
+
+Exam tip (Prelims): eliminate options; watch absolute words (always/never); map PYQs to static + CA. Accuracy under negative marking matters more than attempting every question.

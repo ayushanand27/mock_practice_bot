@@ -10,6 +10,7 @@ Drop real PDFs / notes here by category, then run `/reindex` in Telegram (or res
 | `ncert_11/` | Class 11 (NCERT) |
 | `ncert_12/` | Class 12 (NCERT) |
 | `ssc_cgl/` | SSC CGL |
+| `upsc/` | UPSC |
 
 **Supported:** `.pdf`, `.txt`, `.md`
 

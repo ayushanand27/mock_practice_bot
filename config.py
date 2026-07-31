@@ -19,6 +19,7 @@ CATEGORIES: dict[str, tuple[str, str]] = {
     "ncert_11": ("Class 11 (NCERT)", "ncert_11"),
     "ncert_12": ("Class 12 (NCERT)", "ncert_12"),
     "ssc_cgl": ("SSC CGL", "ssc_cgl"),
+    "upsc": ("UPSC", "upsc"),
 }
 
 TEST_TYPES = (
