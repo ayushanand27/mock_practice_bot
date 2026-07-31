@@ -129,7 +129,6 @@ def _sarvam_chat(system: str, user: str, max_tokens: int, temperature: float) ->
 
 def _local_chat(system: str, user: str) -> str:
     """Extractive fallback when cloud LLMs are unavailable (e.g. Groq 403 on Azure)."""
-    # Prefer study-materials block if present
     materials = ""
     m = re.search(r"Study materials:\n([\s\S]*?)\n\nStudent question:\n", user)
     if m:
@@ -138,23 +137,33 @@ def _local_chat(system: str, user: str) -> str:
         m2 = re.search(r"Materials:\n([\s\S]*?)(?:\n\nDo not repeat|\Z)", user)
         if m2:
             materials = m2.group(1)
+    # Generic: take largest block after a blank line if labeled otherwise
+    if not materials and "[" in user and "]" in user:
+        materials = user
     question = ""
     q = re.search(r"Student question:\n([\s\S]+)$", user)
     if q:
         question = q.group(1).strip()
+    if not question:
+        q2 = re.search(r"(?i)question:\s*([\s\S]+?)(?:\nModel answer|\nStudent answer|\Z)", user)
+        if q2:
+            question = q2.group(1).strip()
     chunks = [c.strip() for c in re.split(r"\n---\n", materials) if c.strip()]
+    if not chunks and materials.strip():
+        # Split long material into paragraphs
+        chunks = [p.strip() for p in re.split(r"\n\s*\n", materials) if len(p.strip()) > 40]
     if not chunks and materials.strip():
         chunks = [materials.strip()]
     if not chunks:
         return (
             "Cloud AI is temporarily unavailable from this server, and I have no "
-            "retrieved notes for this query. Upload materials or try again later."
+            "retrieved notes for this query. Upload materials or add a free "
+            "GEMINI_API_KEY in .env (https://aistudio.google.com/apikey)."
         )
-    # Keyword overlap ranking
     words = {w.lower() for w in re.findall(r"[a-zA-Z]{3,}", question)}
     scored: list[tuple[int, str]] = []
     for ch in chunks:
-        score = sum(1 for w in words if w in ch.lower())
+        score = sum(1 for w in words if w in ch.lower()) if words else 1
         scored.append((score, ch))
     scored.sort(key=lambda x: x[0], reverse=True)
     top = [c for _, c in scored[:2]] or chunks[:1]
@@ -175,11 +184,16 @@ def chat(
     temperature: float = 0.7,
 ) -> str:
     errors: list[str] = []
-    for name, fn in (
+    providers: list[tuple[str, Any]] = [
         ("groq", lambda: _groq_chat(system, user, max_tokens, temperature)),
         ("gemini", lambda: _gemini_chat(system, user, max_tokens, temperature)),
-        ("sarvam", lambda: _sarvam_chat(system, user, max_tokens, temperature)),
-    ):
+    ]
+    # Sarvam chat is optional — often slow from cloud VMs; enable with SARVAM_CHAT=1
+    if os.getenv("SARVAM_CHAT", "").strip() in {"1", "true", "yes"}:
+        providers.append(
+            ("sarvam", lambda: _sarvam_chat(system, user, max_tokens, temperature))
+        )
+    for name, fn in providers:
         try:
             text = fn()
             if text:
@@ -189,7 +203,7 @@ def chat(
         except Exception as exc:  # noqa: BLE001
             errors.append(f"{name}: {exc}")
             logger.warning("LLM provider %s failed: %s", name, exc)
-    logger.error("All cloud LLMs failed (%s); using local fallback", "; ".join(errors))
+    logger.error("Cloud LLMs failed (%s); using local fallback", "; ".join(errors))
     return _local_chat(system, user)
 
 
