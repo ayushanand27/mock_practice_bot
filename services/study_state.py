@@ -23,6 +23,7 @@ class StudySession:
     session_log: list[dict[str, Any]] = field(default_factory=list)
     last_learn_answer: str = ""
     voice_learn: bool = True
+    offline_notice_shown: bool = False
 
 
 _SESSIONS: dict[int, StudySession] = {}

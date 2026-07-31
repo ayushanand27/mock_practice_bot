@@ -41,6 +41,8 @@ def _user(data: dict[str, Any], user_id: int) -> dict[str, Any]:
             "daily_goal": 10,
             "daily_answered": 0,
             "daily_date": None,
+            "daily_ai_calls": 0,
+            "ai_warned_date": None,
             "total_answered": 0,
             "total_correct": 0,
             "by_category": {},
@@ -67,6 +69,7 @@ def _roll_day(u: dict[str, Any]) -> None:
             u["streak"] = 1
         u["daily_date"] = today
         u["daily_answered"] = 0
+        u["daily_ai_calls"] = 0
         u["last_active"] = today
 
 
@@ -109,6 +112,42 @@ def record_answer(
             u["wrong"] = wrong[-30:]  # keep last 30
         _save(data)
         return dict(u)
+
+
+AI_WARN_THRESHOLD = 20
+
+
+def record_ai_call(user_id: int) -> dict[str, Any]:
+    """Track cloud LLM usage for soft daily warnings (does not block)."""
+    with _LOCK:
+        data = _load()
+        u = _user(data, user_id)
+        _roll_day(u)
+        u["daily_ai_calls"] = int(u.get("daily_ai_calls") or 0) + 1
+        _save(data)
+        return dict(u)
+
+
+def ai_usage_warning(user_id: int) -> str | None:
+    """Return a one-per-day soft warning after ~AI_WARN_THRESHOLD cloud calls."""
+    with _LOCK:
+        data = _load()
+        u = _user(data, user_id)
+        _roll_day(u)
+        calls = int(u.get("daily_ai_calls") or 0)
+        today = _today()
+        if calls < AI_WARN_THRESHOLD:
+            _save(data)
+            return None
+        if u.get("ai_warned_date") == today:
+            _save(data)
+            return None
+        u["ai_warned_date"] = today
+        _save(data)
+        return (
+            f"ℹ️ You've used AI for ~{calls} Learn/Test generations today. "
+            "Heavy use may switch to notes mode until ~5:30 AM IST — still usable."
+        )
 
 
 def get_stats(user_id: int) -> dict[str, Any]:

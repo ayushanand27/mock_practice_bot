@@ -58,20 +58,33 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             f"\n🔥 Streak: {stats.get('streak', 0)} · "
             f"Today {stats.get('daily_answered', 0)}/{stats.get('daily_goal', 10)}"
         )
+    pitch = (
+        f"Hi {name}! 👋{streak_line}\n\n"
+        "*Your exam coach on Telegram* @mock_practice_bot\n\n"
+        "📚 *What it does*\n"
+        "Learn concepts and take practice tests grounded in *your* study materials "
+        "(Placement, JEE, NEET, Class 11/12, SSC CGL, UPSC).\n\n"
+        "🚀 *How to start*\n"
+        "1. Pick a category below\n"
+        "2. Pick a topic (or All topics)\n"
+        "3. Tap *Learn* (ask anything) or *Test* (MCQ / MSQ / Numerical / Theory)\n"
+        "4. End test → shareable session report\n\n"
+        "📤 *Materials*\n"
+        "Upload a PDF for best results (Upload → category → send file).\n"
+        "No PDF yet? The bot still works on whatever notes are already indexed.\n\n"
+        "ℹ️ *Free AI quota*\n"
+        "Heavy use may switch to notes-only answers until the daily reset "
+        "(~5:30 AM IST). Learn & Test keep working.\n\n"
+        "Pick a category to begin:"
+    )
     if update.message:
         await update.message.reply_text(
-            f"Hi {name}! 👋{streak_line}\n\n"
-            "Your exam coach on Telegram:\n"
-            "1) Pick a category\n"
-            "2) Pick a topic/chapter\n"
-            "3) Learn · Test · Practice mistakes\n"
-            "4) End test → session report\n\n"
-            "Upload PDFs anytime to improve answers.\n"
-            "Pick a category to begin:",
+            pitch,
             reply_markup=categories_keyboard(),
+            parse_mode="Markdown",
         )
         await update.message.reply_text(
-            "Shortcuts: Study · Upload · Progress · Review · Notes · Reminders",
+            "Shortcuts: 📚 Study · Upload · 📊 Progress · 📝 Review",
             reply_markup=main_reply_keyboard(),
         )
 

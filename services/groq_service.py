@@ -21,6 +21,13 @@ DEFAULT_MODEL = "llama-3.3-70b-versatile"
 SARVAM_MODEL = "sarvam-105b"
 GEMINI_MODEL = "gemini-2.0-flash"
 
+OFFLINE_PREFIX = "📚 From your notes"
+OFFLINE_USER_NOTE = (
+    "Using notes mode (AI quota busy) — answers from your materials."
+)
+
+_last_chat_offline = False
+
 
 def is_configured() -> bool:
     """True if any generative path can run (including local fallback)."""
@@ -146,6 +153,15 @@ def _sarvam_chat(system: str, user: str, max_tokens: int, temperature: float) ->
     return text
 
 
+def is_offline_response(text: str) -> bool:
+    """True when chat() fell back to extractive local answers."""
+    return bool(text) and (
+        text.startswith(OFFLINE_PREFIX)
+        or "offline mode" in text.lower()
+        or "notes mode" in text.lower()
+    )
+
+
 def _local_chat(system: str, user: str) -> str:
     """Extractive fallback when cloud LLMs are unavailable (e.g. Groq 403 on Azure)."""
     materials = ""
@@ -175,9 +191,9 @@ def _local_chat(system: str, user: str) -> str:
         chunks = [materials.strip()]
     if not chunks:
         return (
-            "Cloud AI is temporarily unavailable from this server, and I have no "
-            "retrieved notes for this query. Upload materials or add a free "
-            "GEMINI_API_KEY in .env (https://aistudio.google.com/apikey)."
+            "Cloud AI is temporarily unavailable, and I have no "
+            "retrieved notes for this query. Upload materials via Upload "
+            "or ask the owner to add files and run /reindex."
         )
     words = {w.lower() for w in re.findall(r"[a-zA-Z]{3,}", question)}
     scored: list[tuple[int, str]] = []
@@ -190,9 +206,8 @@ def _local_chat(system: str, user: str) -> str:
     if len(body) > 2800:
         body = body[:2790] + "…"
     return (
-        "📚 From your notes (offline mode — cloud LLM blocked from this host):\n\n"
-        f"{body}\n\n"
-        "Tip: Add a free Gemini key (GEMINI_API_KEY) in .env for smarter answers on Azure."
+        f"{OFFLINE_PREFIX} (notes mode — cloud AI busy):\n\n"
+        f"{body}"
     )
 
 
@@ -202,6 +217,7 @@ def chat(
     max_tokens: int = 600,
     temperature: float = 0.7,
 ) -> str:
+    global _last_chat_offline
     errors: list[str] = []
     providers: list[tuple[str, Any]] = [
         ("groq", lambda: _groq_chat(system, user, max_tokens, temperature)),
@@ -216,6 +232,7 @@ def chat(
         try:
             text = fn()
             if text:
+                _last_chat_offline = False
                 if name != "groq":
                     logger.info("LLM via %s", name)
                 return text
@@ -223,7 +240,13 @@ def chat(
             errors.append(f"{name}: {exc}")
             logger.warning("LLM provider %s failed: %s", name, exc)
     logger.error("Cloud LLMs failed (%s); using local fallback", "; ".join(errors))
+    _last_chat_offline = True
     return _local_chat(system, user)
+
+
+def chat_used_offline() -> bool:
+    """Whether the most recent chat() call used the local fallback."""
+    return _last_chat_offline
 
 
 def _chat(system: str, user: str, max_tokens: int = 600) -> str:
@@ -249,7 +272,7 @@ def generate_question(topic: str, question_num: int, history: list[dict] | None 
     )
     try:
         text = _chat(system, user, max_tokens=250)
-        if text.startswith("📚 From your notes"):
+        if text.startswith(OFFLINE_PREFIX):
             return f"Explain a key concept in {topic} and give one practical example."
         return text
     except Exception as exc:
@@ -269,7 +292,7 @@ def evaluate_answer(topic: str, question: str, answer: str) -> str:
     user = f"Topic: {topic}\nQuestion: {question}\nCandidate answer: {answer}"
     try:
         text = _chat(system, user, max_tokens=400)
-        if text.startswith("📚 From your notes"):
+        if text.startswith(OFFLINE_PREFIX):
             return (
                 "Score: 5/10\n"
                 "Feedback: Offline mode — review your answer against standard "
@@ -430,21 +453,26 @@ def generate_test_question(
         f"Question type: {qtype}\nDifficulty: {difficulty} — {diff_guide}\n{schema}\n\n"
         f"Materials:\n{material[:6000]}\n\n{avoid_block}"
     )
+    global _last_chat_offline
     try:
         raw = chat(system, user, max_tokens=800, temperature=0.5)
-        if raw.startswith("📚 From your notes") or "offline mode" in raw.lower():
+        if raw.startswith(OFFLINE_PREFIX) or "offline mode" in raw.lower():
+            _last_chat_offline = True
             return _local_test_question(qtype, context, difficulty)
         try:
             data = _extract_json(raw)
         except Exception as exc:
             logger.warning("Failed to parse test JSON: %s | raw=%s", exc, raw[:400])
+            _last_chat_offline = True
             return _local_test_question(qtype, context, difficulty)
         data["type"] = qtype
         if not data.get("prompt"):
+            _last_chat_offline = True
             return _local_test_question(qtype, context, difficulty)
         return data
     except Exception as exc:  # noqa: BLE001
         logger.warning("generate_test_question falling back to local: %s", exc)
+        _last_chat_offline = True
         return _local_test_question(qtype, context, difficulty)
 
 
@@ -516,7 +544,7 @@ def grade_test_answer(
     )
     try:
         text = chat(system, user, max_tokens=450, temperature=0.3)
-        if text.startswith("📚 From your notes"):
+        if text.startswith(OFFLINE_PREFIX):
             return (
                 "Score: 6/10\n"
                 "Feedback: Offline grading — compare your answer to the model points "

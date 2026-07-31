@@ -121,7 +121,8 @@ def answer_question(category: str, question: str) -> str:
     if not hits:
         return (
             "I couldn't find relevant material for this category yet.\n"
-            "Add PDFs/txt under data/materials/{category}/ or upload a file, then /reindex."
+            "• Tap Upload → pick category → send a PDF\n"
+            "• Or ask the owner to add files under data/materials/ and run /reindex"
         )
     context_blocks = []
     sources: list[str] = []

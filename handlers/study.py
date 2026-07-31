@@ -89,9 +89,10 @@ def _empty_materials_note(category: str) -> str:
     if n > 0:
         return f"Indexed chunks: {n}. Upload more PDFs anytime for stronger answers."
     return (
-        "⚠️ No materials indexed yet for this category.\n"
-        "• In Telegram: Upload → pick category → send PDF\n"
-        "• Or drop files in data/materials/{folder}/ then /reindex"
+        "⚠️ No materials indexed for this category yet.\n"
+        "• Tap *Upload* → pick category → send a PDF (best results)\n"
+        "• Or ask the owner to add files under data/materials/ and run /reindex\n"
+        "You can still browse topics — Learn/Test work once materials exist."
     )
 
 
@@ -101,29 +102,44 @@ def _focus_hint(sess: study_state.StudySession) -> str:
     return f"Focus: {topic_label(sess.category, sess.topic)}"
 
 
-def format_session_report(sess: study_state.StudySession) -> str:
+def _maybe_offline_notice(sess: study_state.StudySession, text: str) -> str:
+    """Prepend a short notes-mode line once per session when cloud LLM is unavailable."""
+    offline = groq_service.is_offline_response(text) or groq_service.chat_used_offline()
+    if not offline:
+        return text
+    if sess.offline_notice_shown:
+        return text
+    sess.offline_notice_shown = True
+    return f"{groq_service.OFFLINE_USER_NOTE}\n\n{text}"
+
+
+def format_session_report(
+    sess: study_state.StudySession, *, user_id: int = 0
+) -> str:
     total = sess.score_total
     correct = sess.score_correct
     if total == 0:
         return "Session report: no questions answered."
     acc = 100 * correct / total
+    topic = topic_label(sess.category or "", sess.topic) if sess.topic else "All topics"
+    streak = 0
+    if user_id:
+        streak = int(progress_store.get_stats(user_id).get("streak") or 0)
+    emoji = "🔥" if acc >= 80 else "📈" if acc >= 50 else "💪"
     lines = [
-        "📋 Session report",
-        f"Score: {correct}/{total} ({acc:.0f}%)",
-        f"Category: {category_label(sess.category or '')}",
-        _focus_hint(sess),
-        f"Difficulty: {sess.difficulty}",
+        f"{emoji} Study session — {category_label(sess.category or '')}",
+        f"Score: {correct}/{total} ({acc:.0f}%) · {sess.difficulty.title()} · {topic}",
     ]
+    if streak:
+        lines.append(f"🔥 {streak}-day streak")
+    lines.append("")
+    lines.append("Practice with @mock_practice_bot on Telegram")
     wrongs = [x for x in sess.session_log if not x.get("correct")]
     if wrongs:
-        lines.append(f"\nMissed ({len(wrongs)}):")
-        for i, w in enumerate(wrongs[:5], 1):
-            lines.append(f"{i}. [{w.get('qtype')}] {str(w.get('prompt') or '')[:120]}")
-        if len(wrongs) > 5:
-            lines.append(f"…and {len(wrongs) - 5} more (see Review)")
+        lines.append(f"\nMissed {len(wrongs)} — tap Review or Practice mistakes.")
     else:
-        lines.append("\nPerfect session — no mistakes 🔥")
-    lines.append("\nTip: tap 🎯 Practice mistakes to drill what you missed.")
+        lines.append("\nPerfect session — no mistakes!")
+    lines.append("\n#StudyBot #ExamPrep")
     return "\n".join(lines)
 
 
@@ -372,13 +388,17 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if data == "test:end":
         sess = study_state.get(uid)
-        report = format_session_report(sess)
+        report = format_session_report(sess, user_id=uid)
         stats = progress_store.format_stats(uid)
         study_state.reset_mode(uid)
         study_state.reset_score(uid)
         await _answer(query)
         await query.edit_message_text(_clip(f"{report}\n\n{stats}"))
-        await _reply(update, "Back to categories:", reply_markup=categories_keyboard())
+        await _reply(
+            update,
+            "Copy the report above to share on LinkedIn or WhatsApp.",
+            reply_markup=categories_keyboard(),
+        )
         return True
 
     if data.startswith("upload_cat:"):
@@ -562,6 +582,7 @@ async def _send_test_question(update: Update, context: ContextTypes.DEFAULT_TYPE
             sess.history,
             sess.difficulty,
         )
+        progress_store.record_ai_call(uid)
     except Exception as exc:
         logger.exception("test question failed, forcing local: %s", exc)
         try:
@@ -606,6 +627,11 @@ async def _send_test_question(update: Update, context: ContextTypes.DEFAULT_TYPE
         lines.append("\nWrite your answer in a few sentences.")
 
     plain = "\n".join(lines).replace("*", "")
+    warn = progress_store.ai_usage_warning(uid)
+    if warn:
+        plain = f"{warn}\n\n{plain}"
+    if groq_service.chat_used_offline():
+        plain = _maybe_offline_notice(sess, plain)
     await _reply(
         update,
         plain,
@@ -670,6 +696,11 @@ async def _learn_answer(
         logger.exception("learn answer failed: %s", exc)
         await _reply(update, f"Error: {exc}")
         return
+    progress_store.record_ai_call(uid)
+    answer = _maybe_offline_notice(sess, answer)
+    warn = progress_store.ai_usage_warning(uid)
+    if warn:
+        answer = f"{warn}\n\n{answer}"
     sess.last_learn_answer = answer
     await _reply(update, answer, reply_markup=learn_controls_keyboard())
     # Optional auto voice for shorter answers
