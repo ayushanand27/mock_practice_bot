@@ -1,0 +1,18 @@
+[Unit]
+Description=Mock Practice Telegram RAG Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=azureuser
+WorkingDirectory=/home/azureuser/mock_practice_bot
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/azureuser/mock_practice_bot/.venv/bin/python bot.py
+Restart=always
+RestartSec=5
+# Local RAG can be memory-heavy on 1GiB; allow swap use
+MemoryMax=1800M
+
+[Install]
+WantedBy=multi-user.target
