@@ -37,27 +37,41 @@ def has_cloud_llm() -> bool:
 
 
 def _groq_chat(system: str, user: str, max_tokens: int, temperature: float) -> str:
-    from groq import Groq
-
     key = os.getenv("GROQ_API_KEY", "").strip()
     if not key:
         raise RuntimeError("no groq key")
-    client_kwargs: dict[str, Any] = {"api_key": key}
-    # Optional Cloudflare / OpenAI-compatible proxy to bypass datacenter IP blocks
-    proxy = os.getenv("LLM_PROXY_URL", "").strip() or os.getenv("GROQ_BASE_URL", "").strip()
-    if proxy:
-        client_kwargs["base_url"] = proxy.rstrip("/")
-    client = Groq(**client_kwargs)
     model = os.getenv("GROQ_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
+    payload = {
+        "model": model,
+        "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
-        temperature=temperature,
-        max_tokens=max_tokens,
-    )
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    # Optional Cloudflare / OpenAI-compatible proxy (avoids Azure datacenter IP blocks)
+    proxy = os.getenv("LLM_PROXY_URL", "").strip() or os.getenv("GROQ_BASE_URL", "").strip()
+    if proxy:
+        url = proxy.rstrip("/") + "/chat/completions"
+        with httpx.Client(timeout=60.0) as client:
+            r = client.post(
+                url,
+                headers={
+                    "Authorization": f"Bearer {key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+            )
+            if r.status_code >= 400:
+                raise RuntimeError(f"groq proxy {r.status_code}: {r.text[:300]}")
+            data = r.json()
+        return ((data.get("choices") or [{}])[0].get("message") or {}).get("content") or ""
+
+    from groq import Groq
+
+    client = Groq(api_key=key)
+    response = client.chat.completions.create(**payload)
     return (response.choices[0].message.content or "").strip()
 
 

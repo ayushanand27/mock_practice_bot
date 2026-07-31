@@ -1,0 +1,16 @@
+name = "mock-practice-groq-proxy"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+[ai]
+binding = "AI"
+
+# Keep DO binding/migration so Cloudflare does not reject removing classes abruptly.
+# Code no longer uses the DO; safe to leave for now.
+[[durable_objects.bindings]]
+name = "GROQ_RELAY"
+class_name = "GroqRelay"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["GroqRelay"]
