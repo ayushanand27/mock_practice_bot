@@ -42,7 +42,12 @@ def _groq_chat(system: str, user: str, max_tokens: int, temperature: float) -> s
     key = os.getenv("GROQ_API_KEY", "").strip()
     if not key:
         raise RuntimeError("no groq key")
-    client = Groq(api_key=key)
+    client_kwargs: dict[str, Any] = {"api_key": key}
+    # Optional Cloudflare / OpenAI-compatible proxy to bypass datacenter IP blocks
+    proxy = os.getenv("LLM_PROXY_URL", "").strip() or os.getenv("GROQ_BASE_URL", "").strip()
+    if proxy:
+        client_kwargs["base_url"] = proxy.rstrip("/")
+    client = Groq(**client_kwargs)
     model = os.getenv("GROQ_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
     response = client.chat.completions.create(
         model=model,

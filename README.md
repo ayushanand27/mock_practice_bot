@@ -1,127 +1,240 @@
 # RAG Study Telegram Bot
 
-Study from your own materials with **RAG** (retrieve → Groq answer), then take **MCQ / MSQ / Numerical / Theory** tests.
+Study from your own materials with **RAG**, then take **MCQ / MSQ / Numerical / Theory** tests — with topics, streaks, mistake practice, session reports, and optional voice.
 
-Bot: [@mock_practice_bot](https://t.me/mock_practice_bot)
+**Live bot:** [@mock_practice_bot](https://t.me/mock_practice_bot)  
+**Repo:** https://github.com/ayushanand27/mock_practice_bot  
+**Hosted on:** Azure VM (Always Free / Students) — systemd service `mock-practice-bot`
 
-## Categories
+---
 
-1. Placement (BTech CSE)
-2. JEE
-3. NEET
-4. Class 11 (NCERT)
-5. Class 12 (NCERT)
-6. SSC CGL
+## Categories (7)
 
-Each category supports **Learn** (concept Q&A from RAG materials) and **Test**.
+1. Placement (BTech CSE)  
+2. JEE  
+3. NEET  
+4. Class 11 (NCERT)  
+5. Class 12 (NCERT)  
+6. SSC CGL  
+7. UPSC  
 
-## Quick start
+Each category → **topic/chapter** → **Learn** / **Test** / **Practice mistakes**.
+
+---
+
+## What YOU need to do next (owner checklist)
+
+### 1. Upload real study PDFs (most important)
+Quality of answers depends on materials.
+
+**Option A — Telegram (easiest)**  
+1. Open [@mock_practice_bot](https://t.me/mock_practice_bot)  
+2. Tap **Upload** → pick category  
+3. Send `.pdf` / `.txt` / `.md`  
+4. Wait for “Indexed…”  
+
+**Option B — folders on your PC, then push / copy to Azure**
+
+| Category | Folder |
+|----------|--------|
+| Placement | `data/materials/placement/` |
+| JEE | `data/materials/jee/` |
+| NEET | `data/materials/neet/` |
+| Class 11 | `data/materials/ncert_11/` |
+| Class 12 | `data/materials/ncert_12/` |
+| SSC CGL | `data/materials/ssc_cgl/` |
+| UPSC | `data/materials/upsc/` |
+
+Good free sources for notes (examples):  
+- NCERT: https://ncert.nic.in  
+- OpenStax / other open textbooks (check license)  
+- Your own coaching notes (PDF export)
+
+After adding files on the **server**, run `/reindex` in Telegram.
+
+**Azure server path:**  
+`/home/azureuser/mock_practice_bot/data/materials/<category>/`
+
+### 2. Keep secrets safe
+- Never commit `.env`  
+- You pasted API keys in chat before — **rotate** Telegram bot token (BotFather `/revoke`), Groq, Sarvam, Gemini when you can  
+- Put new keys only in `.env` on the VM (or ask the agent to update via SSH)
+
+### 3. Fix Groq / Gemini on Azure (optional but recommended)
+See section **[Groq & Gemini not working on Azure](#groq--gemini-not-working-on-azure)** below.  
+Until fixed, the bot still works using **offline RAG** (answers/questions from your notes).
+
+### 4. Day-to-day ops
+- Bot auto-starts on the VM (`systemd`)  
+- After code changes on GitHub: `bash scripts/deploy-azure.sh`  
+- Logs: `sudo journalctl -u mock-practice-bot -f`  
+- Stop local `python bot.py` on your laptop so it doesn’t conflict with Azure  
+
+### 5. Share the bot
+Send students: https://t.me/mock_practice_bot  
+Remind them: Upload their own notes → Learn / Test.
+
+---
+
+## Features (current)
+
+| Feature | How |
+|---------|-----|
+| Learn (RAG) | Category → topic → ask a question |
+| Test | MCQ / MSQ / Numerical / Theory + Easy/Medium/Hard |
+| Topics / chapters | After category, pick Physics / DSA / Polity / … |
+| Progress / streak | `/stats` or **Progress** |
+| Review mistakes | `/review` or **Review** |
+| Practice mistakes | Category → **Practice mistakes** |
+| Session report | End test → **End + report** |
+| Voice Learn | Short answers may auto-speak; or **Hear answer** (Sarvam) |
+| Upload | PDF/txt/md → auto reindex |
+| Notes / Reminders / Interview | Secondary menu / commands |
+
+---
+
+## Quick start (local)
 
 ```bash
 cp .env.example .env
-# Set BOT_TOKEN, GROQ_API_KEY; optionally SARVAM_API_KEY
+# Set BOT_TOKEN, GROQ_API_KEY, SARVAM_API_KEY, optional GEMINI_API_KEY
 
 python -m venv .venv
 source .venv/Scripts/activate   # Windows Git Bash
-# Windows CMD: .venv\Scripts\activate
 pip install -r requirements.txt
 python bot.py
 ```
 
-On startup the bot indexes `data/materials/{category}/` into a local Chroma store (`data/chroma/`) using `sentence-transformers` embeddings.
+---
 
-## Exact user flows
+## Env vars
 
-### Learn (concept Q&A)
+| Var | Role |
+|-----|------|
+| `BOT_TOKEN` | Telegram (BotFather) |
+| `GROQ_API_KEY` | Fast LLM (works on laptop; often blocked on cloud IPs) |
+| `GEMINI_API_KEY` | Google AI Studio key (often blocked from datacenter IPs) |
+| `SARVAM_API_KEY` | Voice TTS/STT (+ optional chat if enabled) |
+| `GROQ_MODEL` | Optional, default `llama-3.3-70b-versatile` |
+| `GEMINI_MODEL` | Optional, default `gemini-2.0-flash` |
+| `LLM_PROXY_URL` | Optional OpenAI-compatible proxy base URL (see below) |
 
-1. Open Telegram → `/start`
-2. Tap a category (e.g. Placement)
-3. Tap **Learn**
-4. Ask in plain language, e.g. `What is ACID in DBMS?` or `Explain projectile range`
-5. Bot retrieves top chunks from that category’s materials and answers with Groq
-6. Use inline **Switch to Test** or **Change category** anytime
+Never commit `.env`.
 
-### Test (MCQ / MSQ / Numerical / Theory)
+---
 
-1. `/start` or `/study` → pick category → **Test**
-2. Choose question type
-3. Bot generates a question from retrieved materials
-4. Reply with your answer:
-   - MCQ: one letter `A`–`D`
-   - MSQ: letters e.g. `A C` or `AC`
-   - Numerical: a number
-   - Theory: a short written answer (LLM-graded 0–10; ≥7 counts as correct)
-5. See feedback + running score; tap **Next question**, **Change type**, or **End test**
+## Groq & Gemini not working on Azure
 
-### Upload materials
+### What’s wrong?
 
-1. Tap **Upload** (or send a file after picking a category)
-2. Choose category
-3. Send a `.pdf` / `.txt` / `.md`
-4. Bot saves under `data/uploads/{your_id}/{category}/` and reindexes that category
-5. Continue with Learn or Test
+Your keys work on your **laptop**, but the **Azure VM public IP** (`East Asia` datacenter) is treated as a cloud/server IP:
 
-### Reindex everything
+| Provider | Error from Azure | Meaning |
+|----------|------------------|---------|
+| **Groq** | `403 Forbidden` | Free / abuse protection — blocks many VPS/cloud IPs |
+| **Gemini** | `User location is not supported` / quota | Datacenter / region IP not allowed for API use |
 
-- `/reindex` — rebuilds the vector index for all categories (seed materials + all uploads)
+This is a **provider policy**, not a bug in our bot code.
 
-### Secondary features
+### What the bot does today
 
-| Command / button | Action |
-|------------------|--------|
-| `/note` `/notes` `/clearnotes` | Personal notes |
-| `/remind` `/reminders` | Timed reminders |
-| `/interview` `/end` | Optional mock interview (Groq; Sarvam TTS/STT if keyed) |
-| `/help` `/ping` | Help / health |
+1. Try Groq → Gemini  
+2. If both fail → **offline RAG mode** (retrieve your notes and build answers/questions locally)  
 
-## How to add real PDFs
+So Learn/Test still work after you upload PDFs — just less “smart” than a live LLM.
 
-1. Drop files under the matching folder:
-   - `data/materials/placement/`
-   - `data/materials/jee/`
-   - `data/materials/neet/`
-   - `data/materials/ncert_11/` — e.g. Class 11 NCERT chapter PDFs from [ncert.nic.in](https://ncert.nic.in)
-   - `data/materials/ncert_12/` — e.g. Class 12 NCERT chapter PDFs
-   - `data/materials/ssc_cgl/`
-   - `data/materials/upsc/` — e.g. GS notes / polity / history / economy PDFs
-2. Supported: `.pdf`, `.txt`, `.md`
-3. In Telegram run `/reindex` (or restart if the index was empty)
-4. Prefer many focused chapter PDFs over one giant scan if extraction quality matters
+### How to resolve (pick one)
 
-Seed `.txt` notes ship per category so demo Learn/Test works before you add real books. See `data/materials/README.md`.
+#### Option A — Cloudflare Worker proxy for Groq (best free fix)
+Route Groq calls through Cloudflare’s edge so the request does not come from the Azure IP.
+
+1. Create a free [Cloudflare Workers](https://workers.cloudflare.com) account  
+2. Deploy a tiny Groq proxy (example projects: search `groq-cf-proxy`)  
+3. Set on the Azure VM `.env`:
+   ```env
+   LLM_PROXY_URL=https://YOUR-WORKER.workers.dev/openai/v1
+   GROQ_API_KEY=your_groq_key
+   ```
+4. Redeploy / restart: `sudo systemctl restart mock-practice-bot`  
+
+*(Proxy support can be wired in code if not already — ask the agent to add `base_url` from `LLM_PROXY_URL`.)*
+
+#### Option B — Use an LLM that allows cloud IPs
+Paid or cloud-friendly APIs often work from Azure, e.g.:
+
+- DeepSeek / OpenRouter / Together / Azure OpenAI  
+
+Add the key and ask to wire that provider.
+
+#### Option C — Recreate VM in another region (may still fail)
+Student subscription only allows certain regions (yours: Australia East, East Asia, Korea Central, Southeast Asia, Malaysia West).  
+Moving region **might** help Gemini sometimes, but **cloud IPs are often still blocked**. Not guaranteed.
+
+#### Option D — Keep offline RAG (simplest)
+Upload strong PDFs and stay on note-based answers until you add a proxy or paid API.  
+For an exam bot, **good materials > fancy model**.
+
+### Recommended path for you
+1. **Upload PDFs now** (biggest quality jump)  
+2. Then set up **Cloudflare Groq proxy** (free) **or** OpenRouter/DeepSeek  
+3. Rotate exposed keys  
+
+---
 
 ## Architecture
 
 ```
-bot.py                 # Wiring, /start study-first, post_init index
-config.py              # Categories, paths, chunk settings
-keyboards.py           # Category / Learn-Test / Test-type keyboards
-handlers/
-  common.py            # start, help
-  study.py             # Learn RAG, Test, upload, reindex
-  notes.py / reminders.py / interview.py   # secondary
-rag/
-  chunking.py          # PDF/txt/md → chunks
-  store.py             # sentence-transformers + Chroma
-  pipeline.py          # reindex, retrieve, answer
-services/
-  groq_service.py      # Answers + test generate/grade
-  study_state.py       # Per-user Learn/Test session
-  sarvam_service.py    # Optional TTS/STT (interview voice)
-data/materials/…       # Seed + your PDFs
-data/uploads/{user}/…  # Student uploads
-data/chroma/           # Vector DB (local)
+bot.py                 # Wiring, commands, post_init index
+config.py              # Categories, topics, paths
+keyboards.py           # UI buttons
+handlers/study.py      # Learn / Test / topics / mistakes / voice / upload
+rag/                   # Chunk → embed → Chroma → retrieve
+services/groq_service.py   # Multi-provider LLM + offline fallback
+services/progress_store.py # Streak, stats, wrong answers
+deploy/ + scripts/     # systemd unit + Azure redeploy
 ```
 
-**Flow:** category → Learn (free-text → retrieve top chunks → Groq) or Test (generate question from context → grade).
+---
 
-## Env
+## Deploy to Azure (already set up)
 
-| Var | Role |
-|-----|------|
-| `BOT_TOKEN` | Telegram |
-| `GROQ_API_KEY` | Answers + tests (`llama-3.3-70b-versatile`) |
-| `SARVAM_API_KEY` | Optional voice for interviews |
-| `GROQ_MODEL` | Optional override |
+```bash
+# From your PC (Git Bash), after pushing to GitHub:
+bash scripts/deploy-azure.sh
+```
 
-Never commit `.env`.
+SSH:
+
+```bash
+bash scripts/azure-ssh.sh
+# or:
+ssh -i ~/Downloads/mock-practice-bot_key.pem azureuser@104.208.98.207
+```
+
+Service:
+
+```bash
+sudo systemctl status mock-practice-bot
+sudo journalctl -u mock-practice-bot -f
+```
+
+---
+
+## Commands
+
+| Command | Action |
+|---------|--------|
+| `/start` `/study` | Categories → topics → Learn/Test |
+| `/stats` | Streak, daily goal, accuracy |
+| `/review` | List recent mistakes |
+| `/reindex` | Rebuild vector index |
+| `/note` `/notes` `/clearnotes` | Notes |
+| `/remind` `/reminders` | Reminders |
+| `/interview` `/end` | Mock interview |
+| `/help` `/ping` | Help / health |
+
+---
+
+## License / notes
+
+Personal study project. Do not redistribute copyrighted PDFs. Prefer NCERT and your own notes.
