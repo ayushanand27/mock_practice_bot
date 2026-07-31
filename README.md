@@ -23,18 +23,22 @@ Each category → **topic/chapter** → **Learn** / **Test** / **Practice mistak
 
 Upload flow: send PDFs/txt/md via Telegram **Upload**, or drop files under `data/materials/<category>/` on the server and run `/reindex`.
 
+**Placement / TCS NQT today:** two PDFs uploaded via Telegram → `data/uploads/{user_id}/placement/` → auto-reindexed. Learn and Test retrieve from them (formula sheet, advanced coding topics, DSA patterns).
+
 ---
 
 ## Status: done vs left
 
 | Done | Left (owner) |
 |------|----------------|
-| Bot features (Learn, Test, topics, progress, voice, upload) | Upload **real study PDFs** (biggest quality win) |
-| Azure VM deploy + systemd auto-start | Optional: **rotate** API keys if they were exposed in chat |
-| RAG (Chroma + sentence-transformers) + offline fallback | Optional: better LLM (OpenRouter key, higher Workers AI model) for Groq-quality answers |
-| Cloudflare Worker LLM proxy deployed | |
-| Azure → Worker → **Workers AI** path verified (`X-Relay: workers-ai`) | |
-| `LLM_PROXY_URL` set on VM; proxy code on branch `cursor/cloudflare-llm-proxy` | |
+| Bot features (Learn, Test, topics, progress, voice, upload) | Add more category PDFs (JEE, NEET, SSC, UPSC, NCERT) as needed |
+| Azure VM deploy + systemd auto-start (`mock-practice-bot` **active**) | Optional: **rotate** API keys if they were exposed in chat |
+| RAG (Chroma + sentence-transformers) + offline fallback | Optional: stronger LLM (OpenRouter, larger Workers AI model) |
+| Cloudflare Worker LLM proxy deployed + verified (`X-Relay: workers-ai`) | |
+| **TCS NQT Placement PDFs** uploaded via Telegram + indexed (83 placement chunks) | |
+| Learn/Test smoke-tested against TCS NQT material on Azure | |
+
+**Live index (Jul 2026):** 124 total chunks — Placement 83 (2 TCS NQT PDFs + seed notes), others use demo `.txt` seeds.
 
 ---
 
@@ -78,22 +82,23 @@ This is **API provider geo/datacenter policy**, not a bug in the bot.
 
 ---
 
-## What YOU need to do next (owner checklist)
+## Upload & reindex (materials)
 
-### 1. Upload real study PDFs (most important)
-Quality of answers depends on materials.
+Quality of Learn/Test answers depends on uploaded PDFs.
 
-**Option A — Telegram (easiest)**  
+### Option A — Telegram (easiest)
 1. Open [@mock_practice_bot](https://t.me/mock_practice_bot)  
-2. Tap **Upload** → pick category  
+2. Tap **Upload** → pick category (e.g. **Placement** for TCS NQT)  
 3. Send `.pdf` / `.txt` / `.md`  
-4. Wait for “Indexed…”  
+4. Bot saves to `data/uploads/{your_telegram_user_id}/<category>/` and **auto-reindexes** that category  
+5. Wait for “Indexed…” before Learn/Test  
 
-**Option B — folders on your PC, then push / copy to Azure**
+### Option B — SSH / server folders (shared materials)
+Copy files to `/home/azureuser/mock_practice_bot/data/materials/<category>/` on the VM (or sync from your PC), then run `/reindex` in Telegram (or restart the bot — it rebuilds when the file fingerprint changes).
 
-| Category | Folder |
-|----------|--------|
-| Placement | `data/materials/placement/` |
+| Category | Server folder |
+|----------|---------------|
+| Placement (TCS NQT, etc.) | `data/materials/placement/` or `data/uploads/{user_id}/placement/` |
 | JEE | `data/materials/jee/` |
 | NEET | `data/materials/neet/` |
 | Class 11 | `data/materials/ncert_11/` |
@@ -101,34 +106,56 @@ Quality of answers depends on materials.
 | SSC CGL | `data/materials/ssc_cgl/` |
 | UPSC | `data/materials/upsc/` |
 
-Good free sources for notes (examples):  
-- NCERT: https://ncert.nic.in  
-- OpenStax / other open textbooks (check license)  
-- Your own coaching notes (PDF export)
+**Current TCS NQT files on Azure** (via Telegram upload, Jul 2026):
+- `TCS NQT Advanced Coding Study Material by Placement Lelo.pdf` (~923 KB)  
+- `TCS_NQT_Formula_Sheet_2026 _1_.pdf` (~478 KB)  
+- Path: `data/uploads/8504862904/placement/`  
 
-After adding files on the **server**, run `/reindex` in Telegram.
+### Reindex commands
+- **One category** (after upload handler): automatic  
+- **Full rebuild:** `/reindex` in Telegram, or on the VM:
+  ```bash
+  cd ~/mock_practice_bot && source .venv/bin/activate
+  python -c "from rag import pipeline; print(pipeline.reindex_all())"
+  ```
+- Check index meta: `data/chroma/.index_meta.json` (per-category chunk counts)
 
-**Azure server path:**  
-`/home/azureuser/mock_practice_bot/data/materials/<category>/`
+---
 
-### 2. Keep secrets safe
+## Capacity (free tier)
+
+Rough soft limits for the current stack (Workers AI `llama-3.1-8b` + Azure VM):
+
+| Limit | Guidance |
+|-------|----------|
+| Workers AI neurons | Cloudflare free tier — heavy Learn/Test days may hit quota; bot falls back to **offline RAG** (answers from retrieved chunks) |
+| Practical daily use | ~**30–50 active study sessions/day** across all users before you notice slower or offline answers |
+| Per-user rate limit | Learn ~15 questions/minute (built-in) |
+
+If quota is hit, answers still work from your materials but without full LLM polish. Upgrade Workers AI model/plan or add OpenRouter for headroom.
+
+---
+
+## Owner checklist
+
+### 1. Keep secrets safe
 - Never commit `.env`  
 - If API keys were pasted in chat — **rotate** Telegram bot token (BotFather `/revoke`), Groq, Sarvam, Gemini when you can  
 - Put new keys only in `.env` on the VM (or update via SSH)
 
-### 3. Optional: stronger LLM
+### 2. Optional: stronger LLM
 Current path uses Workers AI `llama-3.1-8b` (free, works from Azure). For richer answers:
 - Add an **OpenRouter** (or similar cloud-friendly) key and wire it in, or  
 - Upgrade the Workers AI model in `deploy/cloudflare-groq-proxy/` and redeploy the Worker.
 
-### 4. Day-to-day ops
+### 3. Day-to-day ops
 - Bot auto-starts on the VM (`systemd`)  
 - Redeploy bot after code changes: `bash scripts/deploy-azure.sh`  
 - Redeploy LLM proxy: `cd deploy/cloudflare-groq-proxy && npx wrangler deploy`  
 - Logs: `sudo journalctl -u mock-practice-bot -f`  
 - Stop local `python bot.py` on your laptop so it doesn’t conflict with Azure  
 
-### 5. Share the bot
+### 4. Share the bot
 Send students: https://t.me/mock_practice_bot  
 Remind them: Upload their own notes → Learn / Test.
 
