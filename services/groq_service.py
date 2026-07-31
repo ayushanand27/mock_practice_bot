@@ -411,16 +411,22 @@ def generate_test_question(
         f"Question type: {qtype}\nDifficulty: {difficulty} — {diff_guide}\n{schema}\n\n"
         f"Materials:\n{material[:6000]}\n\n{avoid_block}"
     )
-    raw = chat(system, user, max_tokens=800, temperature=0.5)
-    if raw.startswith("📚 From your notes") or "offline mode" in raw.lower():
-        return _local_test_question(qtype, context, difficulty)
     try:
-        data = _extract_json(raw)
-    except Exception as exc:
-        logger.warning("Failed to parse test JSON: %s | raw=%s", exc, raw[:400])
+        raw = chat(system, user, max_tokens=800, temperature=0.5)
+        if raw.startswith("📚 From your notes") or "offline mode" in raw.lower():
+            return _local_test_question(qtype, context, difficulty)
+        try:
+            data = _extract_json(raw)
+        except Exception as exc:
+            logger.warning("Failed to parse test JSON: %s | raw=%s", exc, raw[:400])
+            return _local_test_question(qtype, context, difficulty)
+        data["type"] = qtype
+        if not data.get("prompt"):
+            return _local_test_question(qtype, context, difficulty)
+        return data
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("generate_test_question falling back to local: %s", exc)
         return _local_test_question(qtype, context, difficulty)
-    data["type"] = qtype
-    return data
 
 
 def grade_test_answer(

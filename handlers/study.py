@@ -356,10 +356,6 @@ async def _send_test_question(update: Update, context: ContextTypes.DEFAULT_TYPE
         await _reply(update, "Pick a category and test type first.", reply_markup=categories_keyboard())
         return
 
-    if not groq_service.is_configured():
-        await _reply(update, "GROQ_API_KEY is missing — cannot generate tests.")
-        return
-
     if not rate_limit.allow(f"test:{uid}", max_hits=20, window_sec=60):
         wait = rate_limit.retry_after(f"test:{uid}", window_sec=60)
         await _reply(update, f"Slow down — try again in ~{wait}s.")
@@ -382,8 +378,7 @@ async def _send_test_question(update: Update, context: ContextTypes.DEFAULT_TYPE
         if not ctx.strip():
             await _reply(
                 update,
-                "⚠️ No indexed material for this topic yet — generating from general syllabus "
-                "(upload notes for better questions).",
+                "⚠️ No indexed material for this topic yet — generating from your syllabus seeds.",
             )
         q = await asyncio.to_thread(
             groq_service.generate_test_question,
@@ -394,8 +389,23 @@ async def _send_test_question(update: Update, context: ContextTypes.DEFAULT_TYPE
             sess.difficulty,
         )
     except Exception as exc:
-        logger.exception("test question failed: %s", exc)
-        await _reply(update, f"Could not generate question: {exc}")
+        logger.exception("test question failed, forcing local: %s", exc)
+        try:
+            ctx = await asyncio.to_thread(
+                pipeline.context_for_topic, sess.category or "placement", hint
+            )
+        except Exception:  # noqa: BLE001
+            ctx = ""
+        q = groq_service.generate_test_question(
+            category_label(sess.category or "placement"),
+            sess.test_type or "mcq",
+            ctx,
+            sess.history,
+            sess.difficulty,
+        )
+
+    if not q or not q.get("prompt"):
+        await _reply(update, "Could not build a question. Try another category or /reindex.")
         return
 
     sess.current_question = q
