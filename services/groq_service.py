@@ -111,6 +111,7 @@ def generate_test_question(
     qtype: str,
     context: str,
     avoid: list[str] | None = None,
+    difficulty: str = "medium",
 ) -> dict[str, Any]:
     """
     Return a structured question dict:
@@ -119,6 +120,15 @@ def generate_test_question(
     avoid_block = ""
     if avoid:
         avoid_block = "Do not repeat these prompts:\n- " + "\n- ".join(avoid[-5:])
+
+    difficulty = (difficulty or "medium").lower()
+    if difficulty not in {"easy", "medium", "hard"}:
+        difficulty = "medium"
+    diff_guide = {
+        "easy": "Beginner level: direct recall, one concept, short numbers.",
+        "medium": "Standard exam level: apply a concept, one trick allowed.",
+        "hard": "Advanced: multi-step, traps, or combine two ideas.",
+    }[difficulty]
 
     schemas = {
         "mcq": (
@@ -152,7 +162,7 @@ def generate_test_question(
         "Output ONLY valid JSON, no markdown outside JSON."
     )
     user = (
-        f"Question type: {qtype}\n{schema}\n\n"
+        f"Question type: {qtype}\nDifficulty: {difficulty} — {diff_guide}\n{schema}\n\n"
         f"Materials:\n{material[:6000]}\n\n{avoid_block}"
     )
     raw = chat(system, user, max_tokens=800, temperature=0.5)

@@ -16,6 +16,7 @@ def main_reply_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         [
             ["📚 Study", "Upload"],
+            ["📊 Progress", "📝 Review"],
             ["Notes", "Reminders"],
             ["Help"],
         ],
@@ -39,7 +40,24 @@ def mode_keyboard(category_id: str) -> InlineKeyboardMarkup:
                 InlineKeyboardButton("📖 Learn", callback_data=f"mode:learn:{category_id}"),
                 InlineKeyboardButton("📝 Test", callback_data=f"mode:test:{category_id}"),
             ],
+            [
+                InlineKeyboardButton("📊 Progress", callback_data="study:stats"),
+                InlineKeyboardButton("📝 Review mistakes", callback_data="study:review"),
+            ],
             [InlineKeyboardButton("← Categories", callback_data="study:home")],
+        ]
+    )
+
+
+def difficulty_keyboard(category_id: str, test_type: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("Easy", callback_data=f"diff:easy:{test_type}:{category_id}"),
+                InlineKeyboardButton("Medium", callback_data=f"diff:medium:{test_type}:{category_id}"),
+                InlineKeyboardButton("Hard", callback_data=f"diff:hard:{test_type}:{category_id}"),
+            ],
+            [InlineKeyboardButton("← Back", callback_data=f"mode:test:{category_id}")],
         ]
     )
 
@@ -59,7 +77,8 @@ def learn_controls_keyboard() -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton("Change category", callback_data="study:home"),
                 InlineKeyboardButton("Switch to Test", callback_data="study:switch_test"),
-            ]
+            ],
+            [InlineKeyboardButton("📊 Progress", callback_data="study:stats")],
         ]
     )
 
@@ -73,8 +92,9 @@ def test_controls_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton("End test", callback_data="test:end"),
-                InlineKeyboardButton("← Categories", callback_data="study:home"),
+                InlineKeyboardButton("📝 Review mistakes", callback_data="study:review"),
             ],
+            [InlineKeyboardButton("← Categories", callback_data="study:home")],
         ]
     )
 

@@ -3,6 +3,7 @@
 
 # App data (keep seed materials tracked)
 data/notes.json
+data/progress.json
 data/chroma/
 data/uploads/
 data/*.log

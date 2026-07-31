@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
-from telegram import Update
+from telegram import BotCommand, Update
 from telegram.error import BadRequest, Conflict, NetworkError, TimedOut
 from telegram.ext import (
     Application,
@@ -26,7 +26,7 @@ from telegram.ext import (
 )
 
 from handlers import interview, notes, reminders, study
-from handlers.common import help_command, ping, send_main_menu, start
+from handlers.common import help_command, ping, review_command, send_main_menu, start, stats_command
 from services import interview_state as state
 
 load_dotenv()
@@ -101,7 +101,23 @@ def acquire_singleton_lock() -> None:
 
 
 async def post_init(app: Application) -> None:
-    """Warm RAG index after bot starts (non-blocking-ish via thread risk — run sync)."""
+    """Warm RAG index and register command menu."""
+    try:
+        await app.bot.set_my_commands(
+            [
+                BotCommand("start", "Open study categories"),
+                BotCommand("study", "Learn or take a test"),
+                BotCommand("stats", "Streak and progress"),
+                BotCommand("review", "Review wrong answers"),
+                BotCommand("help", "How to use the bot"),
+                BotCommand("note", "Save a note"),
+                BotCommand("remind", "Set a reminder"),
+                BotCommand("interview", "Mock interview practice"),
+                BotCommand("reindex", "Rebuild study index"),
+            ]
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Could not set bot commands: %s", exc)
     try:
         from rag import pipeline
 
@@ -124,6 +140,12 @@ async def menu_text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
     if text in {"📚 Study", "Study", "/study"}:
         await study.study_home(update, context)
+        return
+    if text in {"📊 Progress", "Progress", "/stats"}:
+        await study.show_stats(update, context)
+        return
+    if text in {"📝 Review", "Review", "/review"}:
+        await study.show_review(update, context)
         return
     if text in {"Upload", "📤 Upload"}:
         await study.upload_prompt(update, context)
@@ -205,6 +227,19 @@ async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
         return
     logger.exception("Unhandled error while processing update: %s", exc)
+    # Notify user when possible
+    try:
+        if isinstance(update, Update):
+            msg = (
+                update.effective_message
+                or (update.callback_query.message if update.callback_query else None)
+            )
+            if msg:
+                await msg.reply_text(
+                    "Something went wrong on my side. Try again or /start."
+                )
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def main() -> None:
@@ -226,6 +261,8 @@ def main() -> None:
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("ping", ping))
     app.add_handler(CommandHandler("study", study.study_command))
+    app.add_handler(CommandHandler("stats", stats_command))
+    app.add_handler(CommandHandler("review", review_command))
     app.add_handler(CommandHandler("reindex", study.reindex_command))
 
     app.add_handler(CommandHandler("note", notes.note_command))

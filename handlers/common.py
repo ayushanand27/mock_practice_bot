@@ -6,28 +6,30 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from keyboards import categories_keyboard, main_reply_keyboard
-from services import groq_service, sarvam_service
+from services import groq_service, progress_store, sarvam_service
 
 HELP_TEXT = """*RAG Study Bot*
 
 /start – pick a study category
 /study – Learn or Test menu
-/reindex – rebuild vector index from materials + uploads
+/stats – streak, daily goal, accuracy
+/review – revisit wrong answers
+/reindex – rebuild vector index
 /help · /ping
 
 *Study flow*
 1. Category: Placement · JEE · NEET · Class 11 · Class 12 · SSC CGL · UPSC
-2. *Learn* – ask e.g. "What is ACID?" (answers from your docs)
-3. *Test* – MCQ, MSQ, Numerical, or Theory → answer → score
+2. *Learn* – ask concepts (answers grounded in your docs + sources)
+3. *Test* – MCQ / MSQ / Numerical / Theory → pick Easy/Medium/Hard → score
 
 *Materials*
 • Drop PDFs in data/materials/{{category}}/ then /reindex
-• Or tap Upload → category → send PDF/txt/md (auto-reindexes)
+• Or tap Upload → category → send PDF/txt/md
 
 *Secondary*
 /note · /notes · /clearnotes
 /remind · /reminders
-/interview · /end (mock interview + optional voice)
+/interview · /end
 
 APIs: Groq {groq} · Sarvam {sarvam}
 """
@@ -48,15 +50,26 @@ async def send_main_menu(update: Update, text: str) -> None:
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     name = user.first_name if user else "there"
+    uid = user.id if user else 0
+    streak_line = ""
+    if uid:
+        stats = progress_store.get_stats(uid)
+        streak_line = (
+            f"\n🔥 Streak: {stats.get('streak', 0)} · "
+            f"Today {stats.get('daily_answered', 0)}/{stats.get('daily_goal', 10)}"
+        )
     if update.message:
         await update.message.reply_text(
-            f"Hi {name}! 👋\n\n"
-            "Study from your materials with RAG, then take practice tests.\n"
+            f"Hi {name}! 👋{streak_line}\n\n"
+            "Your personal exam coach on Telegram:\n"
+            "• Learn concepts from your notes (RAG)\n"
+            "• Practice MCQ / MSQ / Numerical / Theory\n"
+            "• Track streak, daily goal & mistakes\n\n"
             "Pick a category to begin:",
             reply_markup=categories_keyboard(),
         )
         await update.message.reply_text(
-            "Menu shortcuts below (Study / Upload / Notes / Reminders).",
+            "Shortcuts: Study · Upload · Progress · Review · Notes · Reminders",
             reply_markup=main_reply_keyboard(),
         )
 
@@ -68,6 +81,18 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             reply_markup=main_reply_keyboard(),
             parse_mode="Markdown",
         )
+
+
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    from handlers import study
+
+    await study.show_stats(update, context)
+
+
+async def review_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    from handlers import study
+
+    await study.show_review(update, context)
 
 
 async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
